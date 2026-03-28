@@ -1,11 +1,20 @@
 import sys
+from PyQt6.QtWidgets import QWidget, QLabel, QMainWindow, QPushButton, QLabel, QVBoxLayout, QApplication
+from PyQt6.QtCore import Qt, QCoreApplication, QPermission
 from PyQt6.QtWidgets import QWidget, QMainWindow, QPushButton, QLabel, QGridLayout, QApplication
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QFont
+from PyQt6.QtCore import QCameraPermission
 from PyQt6.QtMultimedia import QCamera, QMediaCaptureSession, QMediaDevices
 from PyQt6.QtMultimediaWidgets import QVideoWidget
 
-class Main_Window(QMainWindow):
+from simulate import Recorder, KeyPressEvent
+from datetime import timedelta
+
+from app import App
+
+
+class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Main window")
@@ -25,14 +34,33 @@ class Main_Window(QMainWindow):
         self.start.clicked.connect(self.start_video)
 
     def start_video(self):
+        app = App.instance()
+        app.try_camera(self.cam)
+
+
+    def cam(self, permission: Qt.PermissionStatus):
+        if permission != Qt.PermissionStatus.Granted:
+            print("Access denied")
+            return
+
         device = QMediaDevices.defaultVideoInput()
+
+        if device.isNull():
+            print("No camera device detected.")
+            return
+
         self.camera = QCamera(device)
         self.session.setCamera(self.camera)
         self.session.setVideoOutput(self.video_feed)
         self.camera.start()
 
-app = QApplication(sys.argv)
-window = Main_Window()
-window.show()
-app.exec()
 
+
+    def update_recording(self, event: KeyPressEvent):
+        current_txt = self.recording_label.text()
+        new_txt = current_txt + event.show_key()
+        self.recording_label.setText(new_txt)
+
+
+    def finish_recording(self):
+        pass
