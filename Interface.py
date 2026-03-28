@@ -1,4 +1,4 @@
-from PyQt6.QtWidgets import QWidget, QMainWindow, QPushButton, QGridLayout
+from PyQt6.QtWidgets import QWidget, QMainWindow, QPushButton, QGridLayout, QHBoxLayout
 from PyQt6.QtCore import Qt
 from PyQt6.QtMultimedia import QMediaCaptureSession
 import threading
@@ -28,7 +28,7 @@ class MainWindow(QMainWindow):
 
         # video
         self.video_feed = VideoFeed(800, 600)
-        layout.addWidget(self.video_feed, 0, 1)
+        layout.addWidget(self.video_feed, 1, 0)
         layout.setAlignment(Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignHCenter)
 
         # start feed
@@ -116,12 +116,6 @@ class MainWindow(QMainWindow):
         self.session.setCamera(self.camera)
         self.session.setVideoOutput(self.video_feed)
         self.camera.start()
-
-class Video(QImage):
-    def __init__(self, vision: VisionManager):
-        super().__init__()
-        self.vision = vision
-        self.buffer = Queue()
 
     def get_frames(self):
         self.buffer.put(self.vision.get_frame())
