@@ -10,6 +10,7 @@ import os
 
 from numpy import ndarray
 
+#from gesture import Gesture
 
 class VisionManager:
     _instance = None
@@ -149,8 +150,8 @@ class VisionManager:
         return features
 
         
-    def recognise_gesture(self, hand_landmarks, threshold = 0.5):
-        if not self.saved_gestures:
+    def recognise_gesture(self, saved_gestures, hand_landmarks, threshold = 0.5):
+        if not saved_gestures:
             return None, 1.0
         
         current_features = self._get_landmark_features(hand_landmarks)
@@ -158,7 +159,10 @@ class VisionManager:
         best_match = None
         best_distance = float('inf')
         
-        for name, hands in self.saved_gestures.items():
+        for gesture in saved_gestures:
+            hands = gesture.hand
+            name = gesture.name
+
             if len(hands) != len(current_features):
                 continue
             total_distance = 0

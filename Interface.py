@@ -5,6 +5,7 @@ from keyboard import Recorder
 from datetime import timedelta
 
 from video import VideoFeed
+from gesture import GestureMap
 
 
 class MainWindow(QMainWindow):
@@ -31,3 +32,10 @@ class MainWindow(QMainWindow):
         # bindings
         self.recorder = Recorder(duration=timedelta(seconds=5))
         layout.addWidget(self.recorder, 2, 1)
+
+        # record gesture
+        self.gesture_map = GestureMap(keyboard_recorder=self.recorder)
+        self.record_gesture = QPushButton("Record Gesture")
+        self.record_gesture.setFixedSize(100,100)
+        layout.addWidget(self.record_gesture, 1, 0)
+        self.record_gesture.clicked.connect(lambda: self.gesture_map.record_gesture("test", timedelta(seconds=5)))
