@@ -2,7 +2,7 @@ import threading
 from queue import Queue
 
 import cv2
-from PyQt6.QtGui import QPainter, QImage
+from PyQt6.QtGui import QPainter, QImage, QFont
 from PyQt6.QtWidgets import QWidget, QMainWindow, QPushButton, QLabel, QGridLayout, QApplication
 from PyQt6.QtCore import Qt, QPoint, QTimer
 from PyQt6.QtMultimedia import QCamera, QMediaCaptureSession, QMediaDevices
@@ -17,23 +17,29 @@ from app import App
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("Main window")
+        self.setWindowTitle("Short Signs")
         central = QWidget()
-
         self.setCentralWidget(central)
         layout = QGridLayout(central)
 
+        #title
+        self.title = QLabel("Short Signs")
+        self.title_font = self.title.font()
+        self.title_font.setPointSize(20)
+        self.title.setFont(self.title_font)
+        layout.addWidget(self.title, 0, 0)
+
         # video
         self.camera = None
-        self.video_feed = ImageWidget()
+        self.video_feed = QVideoWidget()
         self.video_feed.setFixedSize(800,500)
-        layout.addWidget(self.video_feed, 0, 1)
+        layout.addWidget(self.video_feed, 1, 0)
         layout.setAlignment(Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignHCenter)
 
         # start feed
         self.start = QPushButton("Start feed")
         self.start.setFixedSize(100,100)
-        layout.addWidget(self.start, 1, 1)
+        layout.addWidget(self.start, 2, 0)
         self.session = QMediaCaptureSession()
         self.start.clicked.connect(self.start_video)
 
@@ -51,8 +57,7 @@ class MainWindow(QMainWindow):
 
         self.timer.timeout.connect(self.set_image())
         self.timer.start(10)
-        self.capture_thread = threading.Thread(target=grab_images)
-        self.capture_thread.start()
+
 
     def set_image(self):
         self.video_feed.setImage(self.vision.get_frame())

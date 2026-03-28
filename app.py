@@ -1,7 +1,6 @@
 import sys
 from typing import Callable
 
-import objc
 
 
 from PyQt6.QtCore import QCameraPermission, Qt
@@ -15,29 +14,21 @@ if sys.platform == "darwin":
     info["NSCameraUsageDescription"] = "Camera access is required."
 
 class App(QApplication):
-    _instance = None
-    def __new__(cls, argv: list[str]):
-        if cls._instance is None:
-            cls._instance = super().__new__(cls, argv)
-        return cls._instance
-
     def __init__(self, argv: list[str]):
-        from Interface import MainWindow
         super().__init__(argv)
+        from Interface import MainWindow
         self.window = MainWindow()
         self.window.show()
-        self.exec()
 
     @classmethod
     def instance(cls) -> "App":
-        return super().instance() # type: ignore
+        return super().instance()  # type: ignore
 
     def get_camera_permission(self):
         permission = QCameraPermission()
         status = self.checkPermission(permission)
         if status != Qt.PermissionStatus.Granted:
-            self.requestPermission(permission, self.on_permission_result) # type
-
+            self.requestPermission(permission, self.on_permission_result)
 
     def on_permission_result(self, permission: QCameraPermission, callback: Callable):
         status = self.checkPermission(permission)
@@ -45,4 +36,6 @@ class App(QApplication):
             self.get_camera_permission()
 
 if __name__ == "__main__":
-    app = App([sys.executable, __file__])
+    print("running")
+    app = App(sys.argv)
+    app.exec()
