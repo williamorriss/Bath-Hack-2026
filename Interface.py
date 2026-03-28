@@ -3,7 +3,7 @@ from queue import Queue
 
 import cv2
 from PyQt6.QtGui import QPainter, QImage, QFont
-from PyQt6.QtWidgets import QWidget, QMainWindow, QPushButton, QLabel, QGridLayout, QApplication, QListWidget, QListWidgetItem
+from PyQt6.QtWidgets import QWidget, QMainWindow, QPushButton, QLabel, QGridLayout, QApplication, QListWidget, QListWidgetItem, QHBoxLayout
 from PyQt6.QtCore import Qt, QPoint, QTimer
 from PyQt6.QtMultimedia import QCamera, QMediaCaptureSession, QMediaDevices
 from PyQt6.QtMultimediaWidgets import QVideoWidget
@@ -54,14 +54,45 @@ class MainWindow(QMainWindow):
         self.sliding_boxes(layout)
 
     def sliding_boxes(self,layout):
-        box_layout = QListWidget()
-        item = QListWidgetItem(box_layout)
+        #the item is so that the button can be added into the list widget
+        self.box_layout = QListWidget()
+        item = QListWidgetItem(self.box_layout)
+
         add_button = QPushButton("Add shortcut")
         add_button.setFixedSize(100,100)
-        box_layout.addItem(item)
-        box_layout.setItemWidget(item,add_button)
+        add_button.clicked.connect(self.add_shortcut)
 
-        layout.addWidget(box_layout, 1, 1)
+        #this is so the add button can be centered
+        button_container = QWidget()
+        container_layout = QHBoxLayout(button_container)
+        container_layout.addWidget(add_button, alignment=Qt.AlignmentFlag.AlignHCenter)
+
+        item.setSizeHint(button_container.sizeHint())
+        self.box_layout.addItem(item)
+        self.box_layout.setItemWidget(item,button_container)
+
+        layout.addWidget(self.box_layout, 1, 1)
+
+    def add_shortcut(self):
+        row = QWidget()
+        row_layout = QHBoxLayout(row)
+        gesture = QLabel("Gesture")
+        shortcut = QLabel("Shortcut")
+        name = QLabel("Name")
+        gesture.setFixedSize(100,50)
+        shortcut.setFixedSize(100,50)
+        name.setFixedSize(100,50)
+        row_layout.addWidget(name)
+        row_layout.addWidget(shortcut)
+        row_layout.addWidget(gesture)
+        
+        item = QListWidgetItem()
+        item.setSizeHint(row.sizeHint())
+        # insert before the last item (the button)
+        button_index = self.box_layout.count() - 1
+        self.box_layout.insertItem(button_index, item)
+        self.box_layout.setItemWidget(item, row)
+
 
 
 
