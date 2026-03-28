@@ -31,6 +31,3 @@ class MainWindow(QMainWindow):
         # bindings
         self.recorder = Recorder(duration=timedelta(seconds=5))
         layout.addWidget(self.recorder, 2, 1)
-
-        print(f"VideoFeed geometry: {self.video_feed.geometry()}")
-        print(f"VideoFeed size: {self.video_feed.size()}")

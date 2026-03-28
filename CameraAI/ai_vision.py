@@ -70,7 +70,7 @@ class VisionManager:
         self.cap = cv2.VideoCapture(cap_no)
 
     @staticmethod
-    def instance() -> VisionManager:
+    def instance() -> "VisionManager":
         if VisionManager._instance is None:
             VisionManager._instance = VisionManager()
         return VisionManager._instance

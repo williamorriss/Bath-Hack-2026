@@ -1,11 +1,8 @@
-from pynput.keyboard import Key, KeyCode
+from pynput.keyboard import Key
 from pynput.keyboard import Controller as KeyboardController
-from pynput import keyboard
-from datetime import datetime, timedelta
-from PyQt6.QtCore import QObject, QTimer, pyqtSignal as Signal, QElapsedTimer, QEvent
-from PyQt6.QtWidgets import QPushButton, QLabel
-import threading
-from app import App
+from datetime import timedelta
+from PyQt6.QtCore import QEvent
+from PyQt6.QtWidgets import QPushButton
 
 keyboard_controller = KeyboardController()
 
@@ -24,7 +21,7 @@ class Recorder(QWidget):
 
     def __init__(self, duration: timedelta):
         super().__init__()
-        App.instance().installEventFilter(self)
+        QApplication.instance().installEventFilter(self)
 
         self.timer = QTimer()
         self.timer.timeout.connect(self._finish)
