@@ -280,7 +280,6 @@ def run_webcam_hand_tracker():
 
     # Gesture recorder
     gesture_recorder = GestureRecognizer()
-    is_recording = False
     
     try:
         # Create the landmarker
