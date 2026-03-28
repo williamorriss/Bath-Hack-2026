@@ -1,15 +1,18 @@
 import sys
 from typing import Callable
+
 import objc
 
 
 from PyQt6.QtCore import QCameraPermission, Qt
 from PyQt6.QtWidgets import QApplication
 
-NSBundle = objc.lookUpClass("NSBundle") # type: ignore
-bundle = NSBundle.mainBundle()
-info = bundle.localizedInfoDictionary() or bundle.infoDictionary()
-info["NSCameraUsageDescription"] = "Camera access is required."
+if sys.platform == "darwin":
+    import objc
+    NSBundle = objc.lookUpClass("NSBundle") # type: ignore
+    bundle = NSBundle.mainBundle()
+    info = bundle.localizedInfoDictionary() or bundle.infoDictionary()
+    info["NSCameraUsageDescription"] = "Camera access is required."
 
 class App(QApplication):
     _instance = None
@@ -29,21 +32,17 @@ class App(QApplication):
     def instance(cls) -> "App":
         return super().instance() # type: ignore
 
-    def try_camera(self, callback: Callable):
+    def get_camera_permission(self):
         permission = QCameraPermission()
         status = self.checkPermission(permission)
+        if status != Qt.PermissionStatus.Granted:
+            self.requestPermission(permission, self.on_permission_result) # type
 
-        if status == Qt.PermissionStatus.Undetermined:
-            self.requestPermission(
-                permission,
-                lambda p : self.on_permission_result(p, callback)
-            )
-
-        callback(status)
 
     def on_permission_result(self, permission: QCameraPermission, callback: Callable):
         status = self.checkPermission(permission)
-        callback(status)
+        if status != Qt.PermissionStatus.Granted:
+            self.get_camera_permission()
 
 if __name__ == "__main__":
     app = App([sys.executable, __file__])
