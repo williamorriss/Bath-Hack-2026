@@ -49,9 +49,6 @@ class MainWindow(QMainWindow):
     def sliding_boxes(self,layout):
         box_layout = QListWidget()
         item = QListWidgetItem(box_layout)
-        add_button = QPushButton("Add shortcut")
-        add_button.setFixedSize(100,100)
         box_layout.addItem(item)
-        box_layout.setItemWidget(item,add_button)
 
         layout.addWidget(box_layout, 1, 1)
