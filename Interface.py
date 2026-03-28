@@ -1,17 +1,13 @@
+from PyQt6.QtWidgets import QWidget, QMainWindow, QPushButton, QGridLayout
+from PyQt6.QtCore import Qt
+from PyQt6.QtMultimedia import QMediaCaptureSession
 import threading
-from queue import Queue
 
-import cv2
-from PyQt6.QtGui import QPainter, QImage, QFont
-from PyQt6.QtWidgets import QWidget, QMainWindow, QPushButton, QLabel, QGridLayout, QApplication, QListWidget, QListWidgetItem, QHBoxLayout
+from PyQt6.QtWidgets import QWidget, QMainWindow, QPushButton, QLabel, QGridLayout, QApplication, QListWidget, QListWidgetItem
 from PyQt6.QtCore import Qt, QPoint, QTimer
 from PyQt6.QtMultimedia import QCamera, QMediaCaptureSession, QMediaDevices
-from PyQt6.QtMultimediaWidgets import QVideoWidget
-from keyboard import Recorder
-from datetime import timedelta
-from CameraAI.ai_vision import VisionManager
-
-from app import App
+from bindings import GestureMap
+from video import VideoFeed
 
 
 class MainWindow(QMainWindow):
@@ -19,6 +15,7 @@ class MainWindow(QMainWindow):
         super().__init__()
         self.setWindowTitle("Short Signs")
         central = QWidget()
+
         self.setCentralWidget(central)
         layout = QGridLayout(central)
 
@@ -30,10 +27,8 @@ class MainWindow(QMainWindow):
         layout.addWidget(self.title, 0, 0)
 
         # video
-        self.camera = None
-        self.video_feed = QVideoWidget()
-        self.video_feed.setFixedSize(800,500)
-        layout.addWidget(self.video_feed, 1, 0)
+        self.video_feed = VideoFeed(800, 600)
+        layout.addWidget(self.video_feed, 0, 1)
         layout.setAlignment(Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignHCenter)
 
         # start feed
@@ -41,17 +36,15 @@ class MainWindow(QMainWindow):
         self.start.setFixedSize(100,100)
         layout.addWidget(self.start, 2, 0)
         self.session = QMediaCaptureSession()
-        self.start.clicked.connect(self.start_video)
+        self.start.clicked.connect(self.video_feed.activate)
 
-        # bindings
-        self.recorder = Recorder(duration=timedelta(seconds=5))
-        layout.addWidget(self.recorder, 2, 1)
-
-        # camera
-        self.vision = VisionManager()
+        self.gesture_map = GestureMap()
+        layout.addWidget(self.gesture_map, 2, 1)
 
         #adding the boxes on the side or smth
         self.sliding_boxes(layout)
+
+        self.video_feed.activate()
 
     def sliding_boxes(self,layout):
         #the item is so that the button can be added into the list widget
