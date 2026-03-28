@@ -2,6 +2,7 @@ import mediapipe as mp
 from mediapipe.tasks import python
 from mediapipe.tasks.python import vision
 import numpy as np
+import json
 import cv2
 import os
 
@@ -55,6 +56,32 @@ class VisionManager():
         if not self.cap.isOpened():
             print("Error: Could not open webcam")
             self.cap = None
+
+    def save_gestures_to_json(self, file_path=None):
+        try:
+            if file_path is None:
+                script_dir = os.path.dirname(os.path.abspath(__file__))
+                file_path = os.path.join(script_dir, "saved_gestures.json")
+    
+            with open(file_path, 'w') as f:
+                json.dump(self.saved_gestures, f, indent=4)
+            return True
+        except Exception as e:
+            print(f"Error saving gestures to json: {e}")
+            return False
+
+    def load_gestures_from_json(self, file_path=None):
+        try:
+            if file_path is None:
+                script_dir = os.path.dirname(os.path.abspath(__file__))
+                file_path = os.path.join(script_dir, "saved_gestures.json")
+
+            with open(file_path, 'r') as f:
+                self.saved_gestures = json.load(f)
+            return True
+        except Exception as e:
+            print(f"Error loading gestures to json: {e}")
+            return False
 
     def get_frame(self):
         """Get a single frame from webcam"""
@@ -387,3 +414,15 @@ if __name__ == "__main__":
         if cv2.waitKey(1) & 0xFF == ord('t'):
             gesture, confidence = manager.recognise_gesture(landmarkers.hand_landmarks)
             print(f"Gesture: {gesture}, Confidence: {confidence}")
+        if cv2.waitKey(1) & 0xFF == ord('p'):
+            state = manager.save_gestures_to_json()
+            if state:
+                print("Gestures saved to file")
+            else:
+                print("Error saving gestures to file")
+        if cv2.waitKey(1) & 0xFF == ord('l'):
+            state = manager.load_gestures_from_json()
+            if state:
+                print("Gestures loaded from file")
+            else:
+                print("Error loading gestures from file")
