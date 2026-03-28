@@ -7,7 +7,12 @@ authors = [
 ]
 requires-python = "^3.14"
 dependencies = [
+    "pynput (>=1.8.1,<2.0.0)"
 ]
+
+[tool.poetry]
+# Stops dir having to match project name
+package-mode = false
 
 
 [build-system]
