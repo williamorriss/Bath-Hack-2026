@@ -17,15 +17,17 @@ def previous(): keyboard_controller.tap(Key.media_previous)
 from PyQt6.QtWidgets import QApplication, QLabel, QVBoxLayout, QWidget
 from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtGui import QKeyEvent
-
+from PyQt6.QtCore import pyqtSignal as Signal
 
 class Recorder(QWidget):
+    finished = Signal(list)
+
     def __init__(self, duration: timedelta):
         super().__init__()
         App.instance().installEventFilter(self)
 
-        self._timer = QTimer()
-        self._timer.timeout.connect(self._finish)
+        self.timer = QTimer()
+        self.timer.timeout.connect(self._finish)
 
         self.duration = duration
         self.keys_pressed = []
@@ -54,7 +56,7 @@ class Recorder(QWidget):
 
 
     def eventFilter(self, watched_obj, event):
-        if not self._timer.isActive():
+        if not self.timer.isActive():
             return super().eventFilter(watched_obj, event)
 
 
@@ -79,10 +81,11 @@ class Recorder(QWidget):
 
     def _start(self):
         print("start")
-        self._timer.start(self.duration.seconds * 1000)
+        self.timer.start(self.duration.seconds * 1000)
 
     def _finish(self):
-        self._timer.stop()
+        self.timer.stop()
+        self.finished.emit(self.keys_pressed)
         print(self.keys_pressed)
         print("finished")
 

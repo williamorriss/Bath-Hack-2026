@@ -1,4 +1,5 @@
 import mediapipe as mp
+from PyQt6.QtGui import QPixmap, QImage
 from mediapipe.tasks import python
 from mediapipe.tasks.python import vision
 import numpy as np
@@ -6,8 +7,16 @@ import json
 import cv2
 import os
 
-class VisionManager():
-    saved_gestures = {}
+
+from numpy import ndarray
+
+
+class VisionManager:
+    _instance = None
+    def __new__(cls):
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+        return cls._instance
 
     HAND_CONNECTIONS = [
         (0, 1), (1, 2), (2, 3), (3, 4),        # Thumb
@@ -60,18 +69,14 @@ class VisionManager():
     def set_source(self, cap_no: int):
         self.cap = cv2.VideoCapture(cap_no)
 
-    def save_gestures_to_json(self, file_path=None):
-        try:
-            if file_path is None:
-                script_dir = os.path.dirname(os.path.abspath(__file__))
-                file_path = os.path.join(script_dir, "saved_gestures.json")
-    
-            with open(file_path, 'w') as f:
-                json.dump(self.saved_gestures, f, indent=4)
-            return True
-        except Exception as e:
-            print(f"Error saving gestures to json: {e}")
-            return False
+    @staticmethod
+    def instance() -> VisionManager:
+        if VisionManager._instance is None:
+            VisionManager._instance = VisionManager()
+        return VisionManager._instance
+
+
+
     def release(self):
         """Clean up resources"""
         if self.cap:
@@ -97,7 +102,7 @@ class VisionManager():
         frame = cv2.flip(frame, 1)
         return frame
     
-    def get_annotated_frame(self, landmarkers, frame):
+    def get_annotated_frame(self, landmarkers, frame) -> np.ndarray | None:
         # Draw hand landmarks if detected
         if landmarkers.hand_landmarks:
             # Draw the landmarks
@@ -139,14 +144,10 @@ class VisionManager():
 
     ######################################################################
 
-    def record_gesture(self, name, hand_landmarks):
-        try:
-            features = self._get_landmark_features(hand_landmarks)
-            self.saved_gestures[name] = features
-            return True
-        except Exception as e:
-            print(f"Error recording gesture: {e}")
-            return False
+    def record_gesture(self, name, hand_landmarks) -> np.ndarray:
+        features = self._get_landmark_features(hand_landmarks)
+        return features
+
         
     def recognise_gesture(self, hand_landmarks, threshold = 0.5):
         if not self.saved_gestures:
@@ -278,6 +279,18 @@ class VisionManager():
         except Exception as e:
             print(f"Detection error: {e}")
             return None
+
+    def update_frame(self) -> QPixmap | None:
+        frame = self.get_frame()
+        landmarks = self.get_landmarkers(frame)
+        bgra = self.get_annotated_frame(landmarks, frame)
+        if bgra is None:
+            return
+
+        rgb = cv2.cvtColor(bgra, cv2.COLOR_BGRA2RGB)
+        h, w, ch = rgb.shape
+        q_image = QImage(rgb.data, w, h, ch * w, QImage.Format.Format_RGB888).copy() # type: ignore
+        return QPixmap.fromImage(q_image)
 
     def _get_landmark_features(self, hand_landmarks):
         full_features = []

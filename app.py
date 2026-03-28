@@ -3,6 +3,7 @@ from typing import Callable
 
 from PyQt6.QtCore import QCameraPermission, Qt
 from PyQt6.QtWidgets import QApplication
+from CameraAI.ai_vision import VisionManager
 
 if sys.platform == "darwin":
     import objc
