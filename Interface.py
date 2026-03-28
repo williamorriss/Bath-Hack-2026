@@ -1,8 +1,9 @@
 import threading
 from queue import Queue
+from time import sleep
 
 import cv2
-from PyQt6.QtGui import QPainter, QImage
+from PyQt6.QtGui import QPainter, QImage, QPixmap
 from PyQt6.QtWidgets import QWidget, QMainWindow, QPushButton, QLabel, QGridLayout, QApplication
 from PyQt6.QtCore import Qt, QPoint, QTimer
 from PyQt6.QtMultimedia import QCamera, QMediaCaptureSession, QMediaDevices
@@ -10,6 +11,8 @@ from PyQt6.QtMultimediaWidgets import QVideoWidget
 from keyboard import Recorder
 from datetime import timedelta
 from CameraAI.ai_vision import VisionManager
+import numpy as np
+from typing import cast
 
 from app import App
 
@@ -24,9 +27,7 @@ class MainWindow(QMainWindow):
         layout = QGridLayout(central)
 
         # video
-        self.camera = None
-        self.video_feed = ImageWidget()
-        self.video_feed.setFixedSize(800,500)
+        self.video_feed = VideoFeed(800, 600)
         layout.addWidget(self.video_feed, 0, 1)
         layout.setAlignment(Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignHCenter)
 
@@ -35,55 +36,53 @@ class MainWindow(QMainWindow):
         self.start.setFixedSize(100,100)
         layout.addWidget(self.start, 1, 1)
         self.session = QMediaCaptureSession()
-        self.start.clicked.connect(self.start_video)
+        self.start.clicked.connect(self.video_feed.activate)
 
         # bindings
         self.recorder = Recorder(duration=timedelta(seconds=5))
         layout.addWidget(self.recorder, 2, 1)
 
-        # camera
-        self.vision = VisionManager()
+        print(f"VideoFeed geometry: {self.video_feed.geometry()}")
+        print(f"VideoFeed size: {self.video_feed.size()}")
+
+class Video:
+    def __init__(self, width: int, height: int):
+        self.frame_width = width
+        self.frame_height = height
+        self.vision = VisionManager(cap_no=1)
+
+    def get_frame(self) -> QPixmap | None:
+        bgra = self.vision.get_frame()
+        if bgra is not None:
+            frame = cv2.resize(bgra, (self.frame_width, self.frame_height))
+            rgb = cv2.cvtColor(frame, cv2.COLOR_BGRA2RGB)
+            h, w, ch = rgb.shape
+            q_image = QImage(rgb.data, w, h, ch * w, QImage.Format.Format_RGB888).copy() # type: ignore
+            return QPixmap.fromImage(q_image)
+        return None
 
 
-    def start_video(self):
-        self.timer = QTimer(self)
-
-
-        self.timer.timeout.connect(self.set_image())
-        self.timer.start(10)
-        self.capture_thread = threading.Thread(target=grab_images)
-        self.capture_thread.start()
-
-    def set_image(self):
-        self.video_feed.setImage(self.vision.get_frame())
-
-
-    def cam(self, permission: Qt.PermissionStatus):
-        if permission != Qt.PermissionStatus.Granted:
-            print("Access denied")
-            return
-
-        device = QMediaDevices.defaultVideoInput()
-
-        if device.isNull():
-            print("No camera device detected.")
-            return
-
-        self.camera = QCamera(device)
-        self.session.setCamera(self.camera)
-        self.session.setVideoOutput(self.video_feed)
-        self.camera.start()
-
-class Video(QImage):
-    def __init__(self, vision: VisionManager):
+class VideoFeed(QLabel):
+    def __init__(self, width: int, height: int):
         super().__init__()
-        self.vision = vision
-        self.buffer = Queue()
+        self.active = False
+        self.video = Video(width, height)
 
-    def get_frames(self):
-        self.buffer.put(self.vision.get_frame())
+        self.timer = QTimer()
+        self.timer.setInterval(33)
+        self.timer.timeout.connect(self._update_frame)
+        self.setFixedSize(width, height)
+        self.setScaledContents(True)
 
-    def set_frame(self, image):
-        self.image = image
-        self.setMinimumSize(image.size())
-        self.update()
+    def _update_frame(self):
+        pixmap = self.video.get_frame()
+        if pixmap is not None:
+            self.setPixmap(pixmap)
+
+    def activate(self):
+        self.active = True
+        self.timer.start()
+
+    def deactivate(self):
+        self.active = False
+        self.timer.stop()

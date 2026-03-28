@@ -18,7 +18,7 @@ class VisionManager():
         (5, 9), (9, 13), (13, 17)              # Palm connections
     ]
 
-    def __init__(self, model_path=None):
+    def __init__(self, model_path=None, cap_no: int = 0):
         self.current_gesture = None
 
         # Fix: Use provided model_path or default to script directory
@@ -52,10 +52,13 @@ class VisionManager():
             self.landmarker = None
 
         # Initialize webcam
-        self.cap = cv2.VideoCapture(0)
+        self.cap = cv2.VideoCapture(cap_no)
         if not self.cap.isOpened():
             print("Error: Could not open webcam")
             self.cap = None
+
+    def set_source(self, cap_no: int):
+        self.cap = cv2.VideoCapture(cap_no)
 
     def save_gestures_to_json(self, file_path=None):
         try:
@@ -83,7 +86,7 @@ class VisionManager():
             print(f"Error loading gestures to json: {e}")
             return False
 
-    def get_frame(self):
+    def get_frame(self) -> np.ndarray | None:
         """Get a single frame from webcam"""
         if self.cap is None:
             print("Webcam not initialized")
