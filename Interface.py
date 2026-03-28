@@ -1,6 +1,6 @@
 import sys
 from PyQt6.QtWidgets import QWidget, QLabel, QMainWindow, QPushButton, QLabel, QVBoxLayout, QApplication
-from PyQt6.QtCore import Qt, QCoreApplication
+from PyQt6.QtCore import Qt, QCoreApplication, QPermission
 from PyQt6.QtWidgets import QWidget, QMainWindow, QPushButton, QLabel, QGridLayout, QApplication
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QFont
@@ -11,27 +11,38 @@ from PyQt6.QtMultimediaWidgets import QVideoWidget
 from simulate import Recorder, KeyPressEvent
 from datetime import timedelta
 
+from app import App
 
-class Main_Window(QMainWindow):
-  def __init__(self):
-    super().__init__()
-    self.setWindowTitle("Main window")
-    central = QWidget()
-    self.setCentralWidget(central)
-    layout = QGridLayout(central)
-    self.video_feed = QVideoWidget()
-    self.video_feed.setFixedSize(800,500)
-    layout.addWidget(self.video_feed, 0, 1)
-    layout.setAlignment(Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignHCenter)
-    self.start = QPushButton("Start feed")
-    self.start.setFixedSize(100,100)
-    layout.addWidget(self.start, 1, 1)
-    self.camera = None
-    self.session = QMediaCaptureSession()
+
+class MainWindow(QMainWindow):
+    def __init__(self):
+        super().__init__()
+        self.setWindowTitle("Main window")
+        central = QWidget()
+        self.setCentralWidget(central)
+        layout = QGridLayout(central)
+        self.video_feed = QVideoWidget()
+        self.video_feed.setFixedSize(800,500)
+        layout.addWidget(self.video_feed, 0, 1)
+        layout.setAlignment(Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignHCenter)
+        self.start = QPushButton("Start feed")
+        self.start.setFixedSize(100,100)
+        layout.addWidget(self.start, 1, 1)
+        self.camera = None
+        self.session = QMediaCaptureSession()
 
         self.start.clicked.connect(self.start_video)
 
-    def _setup_and_start_camera(self):
+    def start_video(self):
+        app = App.instance()
+        app.try_camera(self.cam)
+
+
+    def cam(self, permission: Qt.PermissionStatus):
+        if permission != Qt.PermissionStatus.Granted:
+            print("Access denied")
+            return
+
         device = QMediaDevices.defaultVideoInput()
 
         if device.isNull():
@@ -53,8 +64,3 @@ class Main_Window(QMainWindow):
 
     def finish_recording(self):
         pass
-
-app = QApplication(sys.argv)
-window = Main_Window()
-window.show()
-app.exec()
