@@ -57,6 +57,16 @@ class VisionManager():
             print("Error: Could not open webcam")
             self.cap = None
 
+    def release(self):
+        """Clean up resources"""
+        if self.cap:
+            self.cap.release()
+        if self.landmarker:
+            self.landmarker.close()
+        cv2.destroyAllWindows()
+
+    ######################################################################
+
     def get_frame(self):
         """Get a single frame from webcam"""
         if self.cap is None:
@@ -72,41 +82,47 @@ class VisionManager():
         frame = cv2.flip(frame, 1)
         return frame
     
-    def get_landmarkers(self, frame):
-        """Get hand landmarks from a frame"""
-        if self.landmarker is None:
-            print("Landmarker not initialized")
-            return None
-            
-        if frame is None:
-            print("Frame is None")
-            return None
-        
-        try:
-            # Convert BGR to RGB
-            rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            
-            # Create MediaPipe Image object
-            mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb_frame)
-            
-            # Get timestamp in milliseconds
-            timestamp_ms = int(cv2.getTickCount() / cv2.getTickFrequency() * 1000)
-            
-            # Detect hands in the frame (reuse existing landmarker)
-            result = self.landmarker.detect_for_video(mp_image, timestamp_ms)
-            return result
-            
-        except Exception as e:
-            print(f"Detection error: {e}")
-            return None
+    def get_annotated_frame(self, landmarkers, frame):
+        # Draw hand landmarks if detected
+        if landmarkers.hand_landmarks:
+            # Draw the landmarks
+            annotated_frame = self.draw_hand_landmarks(frame, landmarkers.hand_landmarks)
 
-    def release(self):
-        """Clean up resources"""
-        if self.cap:
-            self.cap.release()
-        if self.landmarker:
-            self.landmarker.close()
-        cv2.destroyAllWindows()
+            # Add finger count information
+            for i, hand_landmarks in enumerate(landmarkers.hand_landmarks):
+                finger_count = self.count_fingers(hand_landmarks)
+
+                # Get wrist position for text placement
+                h, w, _ = frame.shape
+                wrist_x, wrist_y = self.to_pixel(hand_landmarks[0].x, hand_landmarks[0].y, w, h)
+
+                # Display finger count
+                cv2.putText(annotated_frame, f"Fingers: {finger_count}", 
+                           (wrist_x, wrist_y - 20),
+                           cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 0), 2)
+
+                # Get hand type if available
+                if landmarkers.handedness and len(landmarkers.handedness) > i:
+                    hand_type = landmarkers.handedness[i][0].category_name
+                    cv2.putText(annotated_frame, hand_type, 
+                               (wrist_x, wrist_y - 40),
+                               cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 1)
+        else:
+            annotated_frame = frame
+
+        # Add info panel
+        cv2.rectangle(annotated_frame, (10, 10), (250, 70), (0, 0, 0), -1)
+        cv2.putText(annotated_frame, "Hand Tracking Active", (20, 35),
+                   cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
+
+        # Show hand count 
+        hand_count = len(landmarkers.hand_landmarks) if landmarkers.hand_landmarks else 0
+        cv2.putText(annotated_frame, f"Hands detected: {hand_count}", (20, 65),
+        cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 0), 1)
+
+        return annotated_frame
+    
+    ######################################################################
 
     def record_gesture(self, name, hand_landmarks):
         try:
@@ -150,6 +166,8 @@ class VisionManager():
         else:
             return None, normalized_score
         
+    ######################################################################
+
     def save_gestures_to_json(self, file_path=None):
         try:
             if file_path is None:
@@ -217,6 +235,34 @@ class VisionManager():
             return False
 
     ######################################################################
+
+    def get_landmarkers(self, frame):
+        """Get hand landmarks from a frame"""
+        if self.landmarker is None:
+            print("Landmarker not initialized")
+            return None
+            
+        if frame is None:
+            print("Frame is None")
+            return None
+        
+        try:
+            # Convert BGR to RGB
+            rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            
+            # Create MediaPipe Image object
+            mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb_frame)
+            
+            # Get timestamp in milliseconds
+            timestamp_ms = int(cv2.getTickCount() / cv2.getTickFrequency() * 1000)
+            
+            # Detect hands in the frame (reuse existing landmarker)
+            result = self.landmarker.detect_for_video(mp_image, timestamp_ms)
+            return result
+            
+        except Exception as e:
+            print(f"Detection error: {e}")
+            return None
 
     def _get_landmark_features(self, hand_landmarks):
         full_features = []
@@ -339,53 +385,13 @@ class VisionManager():
 
     ######################################################################
 
-    def get_annotated_frame(self, landmarkers, frame):
-        # Draw hand landmarks if detected
-        if landmarkers.hand_landmarks:
-            # Draw the landmarks
-            annotated_frame = self.draw_hand_landmarks(frame, landmarkers.hand_landmarks)
-
-            # Add finger count information
-            for i, hand_landmarks in enumerate(landmarkers.hand_landmarks):
-                finger_count = self.count_fingers(hand_landmarks)
-
-                # Get wrist position for text placement
-                h, w, _ = frame.shape
-                wrist_x, wrist_y = self.to_pixel(hand_landmarks[0].x, hand_landmarks[0].y, w, h)
-
-                # Display finger count
-                cv2.putText(annotated_frame, f"Fingers: {finger_count}", 
-                           (wrist_x, wrist_y - 20),
-                           cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 0), 2)
-
-                # Get hand type if available
-                if landmarkers.handedness and len(landmarkers.handedness) > i:
-                    hand_type = landmarkers.handedness[i][0].category_name
-                    cv2.putText(annotated_frame, hand_type, 
-                               (wrist_x, wrist_y - 40),
-                               cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 1)
-        else:
-            annotated_frame = frame
-
-        # Add info panel
-        cv2.rectangle(annotated_frame, (10, 10), (250, 70), (0, 0, 0), -1)
-        cv2.putText(annotated_frame, "Hand Tracking Active", (20, 35),
-                   cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
-
-        # Show hand count 
-        hand_count = len(landmarkers.hand_landmarks) if landmarkers.hand_landmarks else 0
-        cv2.putText(annotated_frame, f"Hands detected: {hand_count}", (20, 65),
-        cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 0), 1)
-
-        return annotated_frame
-
-    def to_pixel(self, x_norm: float, y_norm: float, w: int, h: int) -> tuple[int, int]:
+    def _to_pixel(self, x_norm: float, y_norm: float, w: int, h: int) -> tuple[int, int]:
         """Convert normalized coordinates to pixel coordinates"""
         x = min(max(x_norm, 0.0), 1.0)
         y = min(max(y_norm, 0.0), 1.0)
         return int(x * w), int(y * h)
 
-    def draw_hand_landmarks(
+    def _draw_hand_landmarks(
         self,
         image_bgr: np.ndarray,
         hand_landmarks_list,
@@ -414,7 +420,7 @@ class VisionManager():
 
         return annotated
 
-    def count_fingers(self, hand_landmarks):
+    def _count_fingers(self, hand_landmarks):
         """Count number of raised fingers"""
         # Fingertip landmarks
         tips = [4, 8, 12, 16, 20]
