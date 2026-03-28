@@ -339,7 +339,7 @@ class VisionManager():
 
     ######################################################################
 
-    def show_camera_feed(self, landmarkers, frame):
+    def get_annotated_frame(self, landmarkers, frame):
         # Draw hand landmarks if detected
         if landmarkers.hand_landmarks:
             # Draw the landmarks
@@ -368,19 +368,16 @@ class VisionManager():
             annotated_frame = frame
 
         # Add info panel
-        cv2.rectangle(annotated_frame, (10, 10), (300, 100), (0, 0, 0), -1)
+        cv2.rectangle(annotated_frame, (10, 10), (250, 70), (0, 0, 0), -1)
         cv2.putText(annotated_frame, "Hand Tracking Active", (20, 35),
                    cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
-        cv2.putText(annotated_frame, "Press 'q' to quit", (20, 65),
-                   cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
 
-        # Show hand count
+        # Show hand count 
         hand_count = len(landmarkers.hand_landmarks) if landmarkers.hand_landmarks else 0
-        cv2.putText(annotated_frame, f"Hands detected: {hand_count}", (20, 90),
-                   cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 0), 1)
+        cv2.putText(annotated_frame, f"Hands detected: {hand_count}", (20, 65),
+        cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 0), 1)
 
-        # Show the frame
-        cv2.imshow('Hand Tracking', annotated_frame)
+        return annotated_frame
 
     def to_pixel(self, x_norm: float, y_norm: float, w: int, h: int) -> tuple[int, int]:
         """Convert normalized coordinates to pixel coordinates"""
@@ -439,7 +436,8 @@ if __name__ == "__main__":
     while True:
         frame = manager.get_frame()
         landmarkers = manager.get_landmarkers(frame)
-        manager.show_camera_feed(landmarkers, frame)
+        annotated_frame = manager.get_annotated_frame(landmarkers, frame)
+        cv2.imshow("Annotated Frame", annotated_frame)
 
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
