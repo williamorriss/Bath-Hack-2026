@@ -28,7 +28,7 @@ class MainWindow(QMainWindow):
         # start feed
         self.start = QPushButton("Start feed")
         self.start.setFixedSize(100,100)
-        layout.addWidget(self.start, 2, 0)
+        layout.addWidget(self.start, 3, 0)
         self.session = QMediaCaptureSession()
         self.start.clicked.connect(self.video_feed.activate)
 
