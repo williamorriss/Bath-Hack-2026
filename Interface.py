@@ -2,17 +2,12 @@ from PyQt6.QtWidgets import QWidget, QMainWindow, QPushButton, QGridLayout
 from PyQt6.QtCore import Qt
 from PyQt6.QtMultimedia import QMediaCaptureSession
 import threading
-from queue import Queue
 
-import cv2
-from PyQt6.QtGui import QPainter, QImage, QFont
 from PyQt6.QtWidgets import QWidget, QMainWindow, QPushButton, QLabel, QGridLayout, QApplication, QListWidget, QListWidgetItem
 from PyQt6.QtCore import Qt, QPoint, QTimer
 from PyQt6.QtMultimedia import QCamera, QMediaCaptureSession, QMediaDevices
-from PyQt6.QtMultimediaWidgets import QVideoWidget
-from keyboard import Recorder
-from datetime import timedelta
-from buildgesture import BuildGesture, GestureMap
+from bindings import GestureMap
+from video import VideoFeed
 
 
 class MainWindow(QMainWindow):
@@ -23,7 +18,6 @@ class MainWindow(QMainWindow):
 
         self.setCentralWidget(central)
         layout = QGridLayout(central)
-
 
         #title
         self.title = QLabel("Short Signs")
@@ -44,18 +38,13 @@ class MainWindow(QMainWindow):
         self.session = QMediaCaptureSession()
         self.start.clicked.connect(self.video_feed.activate)
 
-        # bindings
-        self.recorder = Recorder(duration=timedelta(seconds=5))
-        layout.addWidget(self.recorder, 2, 1)
-
-        # gesture recorder
-        self.gesture_map = GestureMap(keyboard_recorder=self.recorder)
-        self.
-        # camera
-        self.vision = VisionManager()
+        self.gesture_map = GestureMap()
+        layout.addWidget(self.gesture_map, 2, 1)
 
         #adding the boxes on the side or smth
         self.sliding_boxes(layout)
+
+        self.video_feed.activate()
 
     def sliding_boxes(self,layout):
         box_layout = QListWidget()
@@ -66,47 +55,3 @@ class MainWindow(QMainWindow):
         box_layout.setItemWidget(item,add_button)
 
         layout.addWidget(box_layout, 1, 1)
-
-
-
-    def start_video(self):
-        self.timer = QTimer(self)
-
-
-        self.timer.timeout.connect(self.set_image())
-        self.timer.start(10)
-
-
-    def set_image(self):
-        self.video_feed.setImage(self.vision.get_frame())
-
-
-    def cam(self, permission: Qt.PermissionStatus):
-        if permission != Qt.PermissionStatus.Granted:
-            print("Access denied")
-            return
-
-        device = QMediaDevices.defaultVideoInput()
-
-        if device.isNull():
-            print("No camera device detected.")
-            return
-
-        self.camera = QCamera(device)
-        self.session.setCamera(self.camera)
-        self.session.setVideoOutput(self.video_feed)
-        self.camera.start()
-
-class Video(QImage):
-    def __init__(self, vision: VisionManager):
-        super().__init__()
-        self.vision = vision
-        self.buffer = Queue()
-
-    def get_frames(self):
-        self.buffer.put(self.vision.get_frame())
-
-    def set_frame(self, image):
-        self.image = image
-        self.setMinimumSize(image.size())
-        self.update()

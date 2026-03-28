@@ -3,7 +3,7 @@ import json
 from typing import cast, Union
 
 import numpy as np
-from PyQt6.QtCore import QTimer, QEvent, Qt
+from PyQt6.QtCore import QTimer, QEvent, Qt, QObject
 from PyQt6.QtWidgets import QWidget, QApplication, QPushButton, QVBoxLayout, QLabel, QLineEdit
 from PyQt6.QtCore import pyqtSignal as Signal
 from CameraAI.ai_vision import VisionManager
@@ -88,20 +88,18 @@ class GestureMap(QWidget):
         # UI
         ## name
         self.name_field = QLineEdit()
-        self.name_field.placeholderText("Name...")
         self.name_field.setText("")
         self.name_field.textChanged.connect(self.build_map.set_name)
         layout.addWidget(self.name_field)
 
         ## keybind
-        self.keybind_button = QPushButton("Start")
+        self.keybind_button = QPushButton("Bind")
         self.keybind_button.clicked.connect(self.capture_binding.activate)
         layout.addWidget(self.keybind_button)
 
         self.keys_label = QLabel("Keys pressed: (none)")
-        self.capture_binding.update.connect(lambda texts : self.keys_label.setText(texts.join(' ')))
+        self.capture_binding.update.connect(lambda texts : self.keys_label.setText(" ".join(texts)))
         self.capture_binding.binding.connect(lambda texts : self.build_map.set_shortcut)
-        layout.addWidget(self.capture_binding.update)
         self.keys_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.keys_label.setStyleSheet("font-size: 14px; color: #555;")
         layout.addWidget(self.keys_label)
@@ -110,10 +108,12 @@ class GestureMap(QWidget):
         self.gesture_button = QPushButton("Capture Gesture")
         self.gesture_button.clicked.connect(self.capture_gesture.record_gesture)
         self.capture_gesture.binding.connect(lambda gesture : self.build_map.set_gesture)
+        layout.addWidget(self.gesture_button)
 
         # total
         self.commit_button = QPushButton("Commit")
         self.commit_button.clicked.connect(self._commit)
+        layout.addWidget(self.commit_button)
 
         self.setLayout(layout)
 
@@ -152,32 +152,36 @@ class GestureMap(QWidget):
         except Exception as e:
             print(f"Error saving gestures to json: {e}")
 
-class GestureCapture:
+class GestureCapture(QObject):
     binding = Signal(np.ndarray)
     def __init__(self):
+        super().__init__()
         self.timer = QTimer()
         self.timer.timeout.connect(self._capture)
 
     def record_gesture(self):
         self.timer.start(3000)
 
-    def _capture(self, name: str):
+    def _capture(self):
         vision = VisionManager.instance()
         frame = vision.get_frame()
-        landmarks = (vision.get_landmarkers(frame))
+        landmarks = vision.get_landmarkers(frame)
+        gestures = vision.record_gesture(landmarks.hand_landmarks)
+        self.binding.emit(gestures)
 
-        return vision.record_gesture(name, landmarks)
-
-class BindingCapture:
+class BindingCapture(QObject):
     binding = Signal(list)
     update = Signal(list)
     def __init__(self):
+        super().__init__()
         self.active = False
         self.timer = QTimer()
         self.current_binding = []
         self.timer.timeout.connect(self._send)
+        QApplication.instance().installEventFilter(self)
 
     def activate(self):
+        print("BINDING ACTIVE")
         self.active = True
         self.timer.start(3000)
 
@@ -194,7 +198,9 @@ class BindingCapture:
             if event.isAutoRepeat():
                 return True
 
-            self.current_binding.append(BindingCapture._get_event_key(event))
+            key = BindingCapture._get_event_key(event)
+            self.current_binding.append(key)
+            print("PRESSED", key)
             self.update.emit(self.current_binding)
 
             return True
