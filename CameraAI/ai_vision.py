@@ -6,7 +6,7 @@ import cv2
 import os
 
 class VisionManager():
-    saved_gestrues = {}
+    saved_gestures = {}
 
     HAND_CONNECTIONS = [
         (0, 1), (1, 2), (2, 3), (3, 4),        # Thumb
@@ -46,7 +46,6 @@ class VisionManager():
         # Create the landmarker as an instance variable (reused)
         try:
             self.landmarker = vision.HandLandmarker.create_from_options(self.options)
-            print("Hand landmarker created successfully")
         except Exception as e:
             print(f"Error creating landmarker: {e}")
             self.landmarker = None
@@ -108,14 +107,47 @@ class VisionManager():
             self.landmarker.close()
         cv2.destroyAllWindows()
 
-    def record_gesture(self, name, landmarker):
+    def record_gesture(self, name, landmarkers):
         try:
-            features = self._get_landmark_features(landmarker.hand_landmarks)
+            features = self._get_landmark_features(landmarkers)
             self.saved_gestures[name] = features
             return True
         except Exception as e:
             print(f"Error recording gesture: {e}")
             return False
+        
+    def recognise_gesture(self, landmarkers, threshold = 0.5):
+        if not self.saved_gestures:
+            return None, 1.0
+        
+        current_features = self._get_landmark_features(landmarkers)
+        
+        best_match = None
+        best_distance = float('inf')
+        
+        for name, hands in self.saved_gestures.items():
+            if len(hands) != len(current_features):
+                continue
+            total_distance = 0
+
+            for i, template_features in enumerate(hands):
+                # Calculate Euclidean distance between feature vectors
+                distance = np.linalg.norm(current_features[i] - template_features)              
+                total_distance += distance
+
+            if distance < best_distance:
+                best_distance = total_distance
+                best_match = name
+        
+        # Normalize score (0 = perfect match, 1 = completely different)
+        normalized_score = min(best_distance / threshold, 1.0)
+        
+        #print(f"Best match: {best_match}, distance: {best_distance:.3f}, confidence: {1-normalized_score:.2f}")
+        
+        if best_distance < threshold:
+            return best_match, normalized_score
+        else:
+            return None, normalized_score
 
     ######################################################################
 
@@ -126,7 +158,7 @@ class VisionManager():
             features = []
         
             # Calculate hand size for normalization
-            hand_size = self.calculate_hand_size(hand)
+            hand_size = self._calculate_hand_size(hand)
             if hand_size < 0.001:  # Prevent division by zero
                 hand_size = 0.001
 
@@ -139,13 +171,13 @@ class VisionManager():
             palm = hand[palm_center]
 
             for tip in fingertips:
-                dist = self.calculate_distance_3d(palm, hand[tip])
+                dist = self._calculate_distance_3d(palm, hand[tip])
                 normalized_dist = dist / hand_size  # This makes it scale-invariant
                 features.append(normalized_dist)
 
             # 2. Distances between adjacent fingertips (NORMALIZED)
             for i in range(len(fingertips) - 1):
-                dist = self.calculate_distance_3d(
+                dist = self._calculate_distance_3d(
                     hand[fingertips[i]], 
                     hand[fingertips[i+1]]
                 )
@@ -154,14 +186,14 @@ class VisionManager():
 
             # 3. Distances from each fingertip to palm (NORMALIZED) - adding more robust features
             for tip in fingertips:
-                dist = self.calculate_distance_3d(palm, hand[tip])
+                dist = self._calculate_distance_3d(palm, hand[tip])
                 normalized_dist = dist / hand_size
                 features.append(normalized_dist)
 
             # 4. Angles between fingers (these are already scale-invariant)
             for i in range(len(fingertips)):
                 for j in range(i+1, len(fingertips)):
-                    angle = self.calculate_angle_between_points(
+                    angle = self._calculate_angle_between_points(
                         hand[fingertips[i]],
                         hand[palm_center],
                         hand[fingertips[j]]
@@ -171,7 +203,7 @@ class VisionManager():
             # 5. Finger bend angles (how curled each finger is)
             for tip, knuckle in zip(fingertips, knuckles):
                 # Angle between fingertip, knuckle, and palm
-                angle = self.calculate_angle_between_points(
+                angle = self._calculate_angle_between_points(
                     hand[tip],
                     hand[knuckle],
                     hand[palm_center]
@@ -180,13 +212,13 @@ class VisionManager():
 
             # 6. Add hand size ratio features (relative proportions)
             # Distance from thumb to pinky normalized
-            thumb_pinky_dist = self.calculate_distance_3d(
+            thumb_pinky_dist = self._calculate_distance_3d(
                 hand[4], hand[20]
             )
             features.append(thumb_pinky_dist / hand_size)
 
             # Distance from index to ring normalized
-            index_ring_dist = self.calculate_distance_3d(
+            index_ring_dist = self._calculate_distance_3d(
                 hand[8], hand[16]
             )
             features.append(index_ring_dist / hand_size)
@@ -195,6 +227,48 @@ class VisionManager():
             full_features.append(features)
         
         return np.array(full_features)
+    
+    def _calculate_hand_size(self, hand_landmarks):
+        """
+        Calculate hand size as the distance from wrist to middle fingertip
+        This is used for normalization
+        """
+        wrist = hand_landmarks[0]
+        middle_tip = hand_landmarks[12]
+        
+        # Calculate distance
+        dx = wrist.x - middle_tip.x
+        dy = wrist.y - middle_tip.y
+        dz = wrist.z - middle_tip.z
+        
+        hand_size = np.sqrt(dx*dx + dy*dy + dz*dz)
+        return hand_size
+    
+    def _calculate_distance_3d(self, lm1, lm2):
+        """Calculate Euclidean distance between two landmarks"""
+        dx = lm1.x - lm2.x
+        dy = lm1.y - lm2.y
+        dz = lm1.z - lm2.z
+        return np.sqrt(dx*dx + dy*dy + dz*dz)
+    
+    def _calculate_angle_between_points(self, p1, p2, p3):
+        """
+        Calculate angle between vectors (p1->p2) and (p2->p3)
+        """
+        # Convert to vectors
+        v1 = np.array([p1.x - p2.x, p1.y - p2.y, p1.z - p2.z])
+        v2 = np.array([p3.x - p2.x, p3.y - p2.y, p3.z - p2.z])
+        
+        # Calculate angle
+        dot = np.dot(v1, v2)
+        mag1 = np.linalg.norm(v1)
+        mag2 = np.linalg.norm(v2)
+        
+        if mag1 * mag2 == 0:
+            return 0
+        
+        angle = np.arccos(np.clip(dot / (mag1 * mag2), -1.0, 1.0))
+        return angle
 
     ######################################################################
 
@@ -299,6 +373,17 @@ if __name__ == "__main__":
         frame = manager.get_frame()
         landmarkers = manager.get_landmarkers(frame)
         manager.show_camera_feed(landmarkers, frame)
+
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
 
+        if cv2.waitKey(1) & 0xFF == ord('r'):
+            state = manager.record_gesture("test", landmarkers.hand_landmarks)
+            if state:
+                print("Gesture recorded successfully")
+                print(manager.saved_gestures)
+            else:
+                print("Error recording gesture")
+        if cv2.waitKey(1) & 0xFF == ord('t'):
+            gesture, confidence = manager.recognise_gesture(landmarkers.hand_landmarks)
+            print(f"Gesture: {gesture}, Confidence: {confidence}")
