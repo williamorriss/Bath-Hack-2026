@@ -104,11 +104,18 @@ class GestureMap(QWidget):
         self.keys_label.setStyleSheet("font-size: 14px; color: #555;")
         layout.addWidget(self.keys_label)
 
+        self.key_status = QLabel()
+        self.capture_binding.update.connect(self._set_shortcut_status)
+
         ## gesture
         self.gesture_button = QPushButton("Capture Gesture")
         self.gesture_button.clicked.connect(self.capture_gesture.record_gesture)
         self.capture_gesture.binding.connect(lambda gesture : self.build_map.set_gesture)
         layout.addWidget(self.gesture_button)
+
+        self.gesture_status = QLabel()
+        self.capture_gesture.binding.connect(self._set_gesture_status)
+        layout.addWidget(self.gesture_status)
 
         # total
         self.commit_button = QPushButton("Commit")
@@ -116,6 +123,18 @@ class GestureMap(QWidget):
         layout.addWidget(self.commit_button)
 
         self.setLayout(layout)
+
+    def _set_gesture_status(self, gesture: np.ndarray | None):
+        if gesture is not None:
+            self.gesture_status.setText("Gesture Set")
+        else:
+            self.gesture_status.setText("Failed to set Gesture")
+
+    def _set_shortcut_status(self, shortcut: list[str] | None):
+        if shortcut is not None:
+            self.key_status.setText("Shortcut Set")
+        else:
+            self.key_status.setText("Failed to set Shortcut")
 
     def _commit(self):
         gesture_mapping = Gesture.try_from_build_gesture(self.build_map)

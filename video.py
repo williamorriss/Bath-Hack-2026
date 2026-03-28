@@ -1,7 +1,28 @@
+from PyQt6.QtGui import QPixmap
 from PyQt6.QtWidgets import QLabel, QPushButton
 
 from CameraAI.ai_vision import VisionManager
-from PyQt6.QtCore import QTimer, pyqtSignal as Signal
+from PyQt6.QtCore import QTimer, pyqtSignal as Signal, QThread
+
+
+class VideoWorker(QThread):
+    frame_ready = Signal(QPixmap)
+
+    def __init__(self):
+        super().__init__()
+        self.vision = VisionManager().instance()
+        self.active = False
+
+    def run(self):
+        self.active = True
+        while self.active:
+            pxmap = self.vision.update_frame()
+            if pxmap:
+                self.frame_ready.emit(pxmap)
+
+    def stop(self):
+        self.active = False
+
 
 class VideoFeed(QLabel):
     record_gesture_status = Signal(bool)
@@ -21,15 +42,15 @@ class VideoFeed(QLabel):
 
         self.record_gesture_button = QPushButton("Record Gesture")
 
-    def _update(self):
-        pxmap = self.vision.update_frame()
-        if pxmap is not None:
-            self.setPixmap(pxmap)
+        self._worker = VideoWorker()
+        self._worker.frame_ready.connect(self._update)
+
+    def _update(self, frame: QPixmap | None):
+        if frame is not None:
+            self.setPixmap(frame)
 
     def activate(self):
-        self.active = True
-        self.frame_timer.start()
+        self._worker.start()
 
     def deactivate(self):
-        self.active = False
-        self.frame_timer.stop()
+        self._worker.stop()
