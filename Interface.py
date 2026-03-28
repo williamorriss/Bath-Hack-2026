@@ -3,6 +3,7 @@ from PyQt6.QtCore import Qt
 from PyQt6.QtMultimedia import QMediaCaptureSession
 from keyboard import Recorder
 from datetime import timedelta
+from buildgesture import BuildGesture, GestureMap
 
 from video import VideoFeed
 
@@ -15,6 +16,7 @@ class MainWindow(QMainWindow):
 
         self.setCentralWidget(central)
         layout = QGridLayout(central)
+
 
         # video
         self.video_feed = VideoFeed(800, 600)
@@ -31,3 +33,7 @@ class MainWindow(QMainWindow):
         # bindings
         self.recorder = Recorder(duration=timedelta(seconds=5))
         layout.addWidget(self.recorder, 2, 1)
+
+        # gesture recorder
+        self.gesture_map = GestureMap(keyboard_recorder=self.recorder)
+        self.
