@@ -72,19 +72,15 @@ class VisionManager():
         except Exception as e:
             print(f"Error saving gestures to json: {e}")
             return False
+    def release(self):
+        """Clean up resources"""
+        if self.cap:
+            self.cap.release()
+        if self.landmarker:
+            self.landmarker.close()
+        cv2.destroyAllWindows()
 
-    def load_gestures_from_json(self, file_path=None):
-        try:
-            if file_path is None:
-                script_dir = os.path.dirname(os.path.abspath(__file__))
-                file_path = os.path.join(script_dir, "saved_gestures.json")
-
-            with open(file_path, 'r') as f:
-                self.saved_gestures = json.load(f)
-            return True
-        except Exception as e:
-            print(f"Error loading gestures to json: {e}")
-            return False
+    ######################################################################
 
     def get_frame(self) -> np.ndarray | None:
         """Get a single frame from webcam"""
@@ -101,56 +97,62 @@ class VisionManager():
         frame = cv2.flip(frame, 1)
         return frame
     
-    def get_landmarkers(self, frame):
-        """Get hand landmarks from a frame"""
-        if self.landmarker is None:
-            print("Landmarker not initialized")
-            return None
-            
-        if frame is None:
-            print("Frame is None")
-            return None
-        
-        try:
-            # Convert BGR to RGB
-            rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            
-            # Create MediaPipe Image object
-            mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb_frame)
-            
-            # Get timestamp in milliseconds
-            timestamp_ms = int(cv2.getTickCount() / cv2.getTickFrequency() * 1000)
-            
-            # Detect hands in the frame (reuse existing landmarker)
-            result = self.landmarker.detect_for_video(mp_image, timestamp_ms)
-            return result
-            
-        except Exception as e:
-            print(f"Detection error: {e}")
-            return None
+    def get_annotated_frame(self, landmarkers, frame):
+        # Draw hand landmarks if detected
+        if landmarkers.hand_landmarks:
+            # Draw the landmarks
+            annotated_frame = self._draw_hand_landmarks(frame, landmarkers.hand_landmarks)
 
-    def release(self):
-        """Clean up resources"""
-        if self.cap:
-            self.cap.release()
-        if self.landmarker:
-            self.landmarker.close()
-        cv2.destroyAllWindows()
+            # Add finger count information
+            for i, hand_landmarks in enumerate(landmarkers.hand_landmarks):
+                finger_count = self._count_fingers(hand_landmarks)
 
-    def record_gesture(self, name, landmarkers):
+                # Get wrist position for text placement
+                h, w, _ = frame.shape
+                wrist_x, wrist_y = self._to_pixel(hand_landmarks[0].x, hand_landmarks[0].y, w, h)
+
+                # Display finger count
+                cv2.putText(annotated_frame, f"Fingers: {finger_count}",
+                           (wrist_x, wrist_y - 20),
+                           cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 0), 2)
+
+                # Get hand type if available
+                if landmarkers.handedness and len(landmarkers.handedness) > i:
+                    hand_type = landmarkers.handedness[i][0].category_name
+                    cv2.putText(annotated_frame, hand_type,
+                               (wrist_x, wrist_y - 40),
+                               cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 1)
+        else:
+            annotated_frame = frame
+
+        # Add info panel
+        cv2.rectangle(annotated_frame, (10, 10), (250, 70), (0, 0, 0), -1)
+        cv2.putText(annotated_frame, "Hand Tracking Active", (20, 35),
+                   cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
+
+        # Show hand count
+        hand_count = len(landmarkers.hand_landmarks) if landmarkers.hand_landmarks else 0
+        cv2.putText(annotated_frame, f"Hands detected: {hand_count}", (20, 65),
+        cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 0), 1)
+
+        return annotated_frame
+
+    ######################################################################
+
+    def record_gesture(self, name, hand_landmarks):
         try:
-            features = self._get_landmark_features(landmarkers)
+            features = self._get_landmark_features(hand_landmarks)
             self.saved_gestures[name] = features
             return True
         except Exception as e:
             print(f"Error recording gesture: {e}")
             return False
         
-    def recognise_gesture(self, landmarkers, threshold = 0.5):
+    def recognise_gesture(self, hand_landmarks, threshold = 0.5):
         if not self.saved_gestures:
             return None, 1.0
         
-        current_features = self._get_landmark_features(landmarkers)
+        current_features = self._get_landmark_features(hand_landmarks)
         
         best_match = None
         best_distance = float('inf')
@@ -180,6 +182,102 @@ class VisionManager():
             return None, normalized_score
 
     ######################################################################
+
+    def save_gestures_to_json(self, file_path=None):
+        try:
+            if file_path is None:
+                script_dir = os.path.dirname(os.path.abspath(__file__))
+                file_path = os.path.join(script_dir, "saved_gestures.json")
+
+            # Convert numpy arrays to lists for JSON serialization
+            serializable_data = {}
+            for gesture_name, gesture_data in self.saved_gestures.items():
+                if isinstance(gesture_data, np.ndarray):
+                    serializable_data[gesture_name] = gesture_data.tolist()
+                elif isinstance(gesture_data, dict):
+                    # Handle nested dictionaries (for multiple samples)
+                    serializable_data[gesture_name] = {}
+                    for key, value in gesture_data.items():
+                        if isinstance(value, np.ndarray):
+                            serializable_data[gesture_name][key] = value.tolist()
+                        else:
+                            serializable_data[gesture_name][key] = value
+                else:
+                    serializable_data[gesture_name] = gesture_data
+
+            with open(file_path, 'w') as f:
+                json.dump(serializable_data, f, indent=4)
+            print(f"Gestures saved to {file_path}")
+            return True
+        except Exception as e:
+            print(f"Error saving gestures to json: {e}")
+            return False
+
+    def load_gestures_from_json(self, file_path=None):
+        try:
+            if file_path is None:
+                script_dir = os.path.dirname(os.path.abspath(__file__))
+                file_path = os.path.join(script_dir, "saved_gestures.json")
+
+            with open(file_path, 'r') as f:
+                loaded_data = json.load(f)
+
+            # Convert lists back to numpy arrays
+            self.saved_gestures = {}
+            for gesture_name, gesture_data in loaded_data.items():
+                if isinstance(gesture_data, list):
+                    # If it's a list, convert back to numpy array
+                    self.saved_gestures[gesture_name] = np.array(gesture_data)
+                elif isinstance(gesture_data, dict):
+                    # If it's a dictionary, check for numpy arrays inside
+                    self.saved_gestures[gesture_name] = {}
+                    for key, value in gesture_data.items():
+                        if isinstance(value, list):
+                            self.saved_gestures[gesture_name][key] = np.array(value)
+                        else:
+                            self.saved_gestures[gesture_name][key] = value
+                else:
+                    self.saved_gestures[gesture_name] = gesture_data
+
+            print(f"Loaded {len(self.saved_gestures)} gestures from {file_path}")
+            return True
+        except FileNotFoundError:
+            print(f"File {file_path} not found. Starting with empty gestures.")
+            self.saved_gestures = {}
+            return False
+        except Exception as e:
+            print(f"Error loading gestures from json: {e}")
+            return False
+
+    ######################################################################
+
+    def get_landmarkers(self, frame):
+        """Get hand landmarks from a frame"""
+        if self.landmarker is None:
+            print("Landmarker not initialized")
+            return None
+
+        if frame is None:
+            print("Frame is None")
+            return None
+
+        try:
+            # Convert BGR to RGB
+            rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+
+            # Create MediaPipe Image object
+            mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb_frame)
+
+            # Get timestamp in milliseconds
+            timestamp_ms = int(cv2.getTickCount() / cv2.getTickFrequency() * 1000)
+
+            # Detect hands in the frame (reuse existing landmarker)
+            result = self.landmarker.detect_for_video(mp_image, timestamp_ms)
+            return result
+
+        except Exception as e:
+            print(f"Detection error: {e}")
+            return None
 
     def _get_landmark_features(self, hand_landmarks):
         full_features = []
@@ -302,56 +400,13 @@ class VisionManager():
 
     ######################################################################
 
-    def show_camera_feed(self, landmarkers, frame):
-        # Draw hand landmarks if detected
-        if landmarkers.hand_landmarks:
-            # Draw the landmarks
-            annotated_frame = self.draw_hand_landmarks(frame, landmarkers.hand_landmarks)
-
-            # Add finger count information
-            for i, hand_landmarks in enumerate(landmarkers.hand_landmarks):
-                finger_count = self.count_fingers(hand_landmarks)
-
-                # Get wrist position for text placement
-                h, w, _ = frame.shape
-                wrist_x, wrist_y = self.to_pixel(hand_landmarks[0].x, hand_landmarks[0].y, w, h)
-
-                # Display finger count
-                cv2.putText(annotated_frame, f"Fingers: {finger_count}", 
-                           (wrist_x, wrist_y - 20),
-                           cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 0), 2)
-
-                # Get hand type if available
-                if landmarkers.handedness and len(landmarkers.handedness) > i:
-                    hand_type = landmarkers.handedness[i][0].category_name
-                    cv2.putText(annotated_frame, hand_type, 
-                               (wrist_x, wrist_y - 40),
-                               cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 1)
-        else:
-            annotated_frame = frame
-
-        # Add info panel
-        cv2.rectangle(annotated_frame, (10, 10), (300, 100), (0, 0, 0), -1)
-        cv2.putText(annotated_frame, "Hand Tracking Active", (20, 35),
-                   cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
-        cv2.putText(annotated_frame, "Press 'q' to quit", (20, 65),
-                   cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
-
-        # Show hand count
-        hand_count = len(landmarkers.hand_landmarks) if landmarkers.hand_landmarks else 0
-        cv2.putText(annotated_frame, f"Hands detected: {hand_count}", (20, 90),
-                   cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 0), 1)
-
-        # Show the frame
-        cv2.imshow('Hand Tracking', annotated_frame)
-
-    def to_pixel(self, x_norm: float, y_norm: float, w: int, h: int) -> tuple[int, int]:
+    def _to_pixel(self, x_norm: float, y_norm: float, w: int, h: int) -> tuple[int, int]:
         """Convert normalized coordinates to pixel coordinates"""
         x = min(max(x_norm, 0.0), 1.0)
         y = min(max(y_norm, 0.0), 1.0)
         return int(x * w), int(y * h)
 
-    def draw_hand_landmarks(
+    def _draw_hand_landmarks(
         self,
         image_bgr: np.ndarray,
         hand_landmarks_list,
@@ -368,7 +423,7 @@ class VisionManager():
 
         for hand_landmarks in hand_landmarks_list:
             # Convert normalized landmarks to pixel coords
-            pts = [self.to_pixel(lm.x, lm.y, w, h) for lm in hand_landmarks]
+            pts = [self._to_pixel(lm.x, lm.y, w, h) for lm in hand_landmarks]
 
             if draw_connections:
                 for a, b in connections:
@@ -380,7 +435,7 @@ class VisionManager():
 
         return annotated
 
-    def count_fingers(self, hand_landmarks):
+    def _count_fingers(self, hand_landmarks):
         """Count number of raised fingers"""
         # Fingertip landmarks
         tips = [4, 8, 12, 16, 20]
@@ -402,7 +457,8 @@ if __name__ == "__main__":
     while True:
         frame = manager.get_frame()
         landmarkers = manager.get_landmarkers(frame)
-        manager.show_camera_feed(landmarkers, frame)
+        annotated_frame = manager.get_annotated_frame(landmarkers, frame)
+        cv2.imshow("Annotated Frame", annotated_frame)
 
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
