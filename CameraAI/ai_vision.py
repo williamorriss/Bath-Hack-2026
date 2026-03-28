@@ -108,20 +108,20 @@ class VisionManager():
             self.landmarker.close()
         cv2.destroyAllWindows()
 
-    def record_gesture(self, name, landmarkers):
+    def record_gesture(self, name, hand_landmarks):
         try:
-            features = self._get_landmark_features(landmarkers)
+            features = self._get_landmark_features(hand_landmarks)
             self.saved_gestures[name] = features
             return True
         except Exception as e:
             print(f"Error recording gesture: {e}")
             return False
         
-    def recognise_gesture(self, landmarkers, threshold = 0.5):
+    def recognise_gesture(self, hand_landmarks, threshold = 0.5):
         if not self.saved_gestures:
             return None, 1.0
         
-        current_features = self._get_landmark_features(landmarkers)
+        current_features = self._get_landmark_features(hand_landmarks)
         
         best_match = None
         best_distance = float('inf')
