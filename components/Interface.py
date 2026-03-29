@@ -60,6 +60,11 @@ class MainWindow(QMainWindow):
         #shortcut player loop
         self.shortcut_player = ShortcutPlayer(self.gesture_map.binding)
 
+        something = QLabel('something here')
+        something.setFixedSize(100,100)
+        layout.addWidget(something, 4, 2)
+
+
     def sliding_boxes(self, layout, gesture_map):
         box_layout = QListWidget()
 
