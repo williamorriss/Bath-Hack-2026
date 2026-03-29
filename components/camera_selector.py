@@ -15,7 +15,7 @@ import cv2
 from video import VideoFeed
 
 
-def get_active_cameras(max_index: int = 10) -> list[QPushButton]:
+def get_active_cameras(max_index: int = 5) -> list[QPushButton]:
     """
     Probe camera indices 0..max_index-1 and return info for every one that opens.
     """
@@ -94,15 +94,19 @@ class CameraSelector(QWidget):
             btn.setChecked(False)
             self._apply_style(btn, selected=False)
 
-        self.video_feed.deactivate()
-        VisionManager.instance().set_source(item)
-        self.video_feed.activate()
-        self.selected = item
-        btn = self._buttons[item]
-        btn.setChecked(True)
-        self._apply_style(btn, selected=True)
-        self.status.setText(f"Selected: {item}")
-        self.status.setStyleSheet("color: #2a6aba; font-style: normal; font-weight: bold;")
+        try:
+            self.video_feed.deactivate()
+            VisionManager.instance().set_source(item)
+            self.video_feed.activate()
+            self.selected = item
+            btn = self._buttons[item]
+            btn.setChecked(True)
+            self._apply_style(btn, selected=True)
+            self.status.setText(f"Selected: {item}")
+            self.status.setStyleSheet("color: #2a6aba; font-style: normal; font-weight: bold;")
+        except Exception as e:
+            print("exp", e)
+            return
 
     # ── Styling helpers ──────────────────────────────────────────────────────
 
