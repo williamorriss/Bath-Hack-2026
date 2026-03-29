@@ -1,7 +1,7 @@
 from mediapipe.tasks.python.components.containers import landmark
 
 from components.bindings import BindingManager
-from CameraAI.ai_vision import VisionManager, HandLandmarkerResult, Annotated
+from CameraAI.ai_vision import VisionManager
 
 from pynput.keyboard import Controller, Key
 
@@ -14,11 +14,6 @@ import os, sys
 def kill():
     if sys.platform == "win32":
         os.system("shutdown /s /t 0")
-    elif sys.platform == "darwin":
-        os.system("sudo shutdown -h now")
-    else:  # linux
-        os.system("sudo shutdown -h now")
-
 
 class ShortcutPlayer(QObject):
     KEY_MAP = {
@@ -62,16 +57,15 @@ class ShortcutPlayer(QObject):
         self.keyboard = Controller()
         self.binding_manager = binding_manager
         self.vision_manager = VisionManager.instance()
-        self.vision_manager.annotated_frame_ready.connect(self.regonise_play_shortcut)
+        self.vision_manager.landmarks_ready.connect(self.regonise_play_shortcut)
 
         self.previous_gesture_name = None
 
-    def regonise_play_shortcut(self, t: Annotated):
-        frame, landmarkers = t.get()
+    def regonise_play_shortcut(self, landmarkers):
         if landmarkers is None:
             return False
 
-        name, confidence = self.vision_manager.recognise_gesture(self.binding_manager.bindings, landmarkers.hand_landmarks)
+        name, confidence = self.vision_manager.recognise_gesture(self.binding_manager.bindings, landmarkers.hand_landmarks, threshold = 0.7)
 
         if not self.binding_manager.bindings or name is None or name == self.previous_gesture_name:
             self.previous_gesture_name = name
@@ -93,7 +87,7 @@ class ShortcutPlayer(QObject):
             if "http" in k:
                 webbrowser.open(k)
 
-            if "kill":
+            if k == "kill":
                 kill()
 
             if len(k) == 1:
