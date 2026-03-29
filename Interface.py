@@ -8,6 +8,7 @@ from PyQt6.QtCore import Qt, QPoint, QTimer
 from PyQt6.QtMultimedia import QCamera, QMediaCaptureSession, QMediaDevices
 from bindings import GestureMap
 from video import VideoFeed
+from ShortcutPlayer import ShortcutPlayer
 
 
 class MainWindow(QMainWindow):
@@ -45,6 +46,10 @@ class MainWindow(QMainWindow):
         self.sliding_boxes(layout)
 
         self.video_feed.activate()
+
+        #shortcut player loop
+        self.shortcut_player = ShortcutPlayer(self.gesture_map)
+        layout.addWidget(self.shortcut_player, 2, 2)
 
     def sliding_boxes(self,layout):
         box_layout = QListWidget()

@@ -75,6 +75,8 @@ class Gesture:
         }
 
 class GestureMap(QWidget):
+    gestures = []
+
     def __init__(self):
         super().__init__()
         self.setFixedSize(400, 200)
@@ -118,13 +120,25 @@ class GestureMap(QWidget):
         self.setLayout(layout)
 
     def _commit(self):
-        gesture_mapping = Gesture.try_from_build_gesture(self.build_map)
-        if gesture_mapping is None:
-            return
+        #gesture_mapping = Gesture.try_from_build_gesture(self.build_map)
+        #if gesture_mapping is None:
+         #   return
 
-        # self._save_to_json()
 
+        frame = VisionManager.instance().get_frame()
+        landmarks = VisionManager.instance().get_landmarkers(frame)
+        gestures = VisionManager.instance().record_gesture(landmarks.hand_landmarks)
+        
+        ges = Gesture.try_from_build_gesture(BuildGesture("test", gestures, ["a"]))
+
+        self.gestures.append(ges)
         print("saving")
+
+    def get_gesture(self, name: str) -> Union[Gesture, None]:
+        for gesture in self.gestures:
+            if gesture.name == name:
+                return gesture
+        return None
 
     @staticmethod
     def _save_to_json(self) -> bool:
@@ -167,6 +181,8 @@ class GestureCapture(QObject):
         frame = vision.get_frame()
         landmarks = vision.get_landmarkers(frame)
         gestures = vision.record_gesture(landmarks.hand_landmarks)
+
+        print("Gestures captured")
         self.binding.emit(gestures)
 
 class BindingCapture(QObject):
@@ -189,6 +205,8 @@ class BindingCapture(QObject):
         self.binding.emit(self.current_binding)
         self.current_binding = []
         self.active = False
+
+        print("BINDING INACTIVE")
 
     def eventFilter(self, watched_obj, event):
         if not self.timer.isActive():

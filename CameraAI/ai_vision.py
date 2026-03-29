@@ -160,7 +160,7 @@ class VisionManager:
         best_distance = float('inf')
         
         for gesture in saved_gestures:
-            hands = gesture.hand
+            hands = gesture.gesture
             name = gesture.name
 
             if len(hands) != len(current_features):

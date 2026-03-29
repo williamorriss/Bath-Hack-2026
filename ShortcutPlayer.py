@@ -1,23 +1,36 @@
-from gesture import GestureMap
+from bindings import GestureMap, Gesture
 from CameraAI.ai_vision import VisionManager
 
 from pynput.keyboard import Controller, Key
 
-class ShortcutPlayer:
+from PyQt6.QtCore import QTimer, QEvent, Qt, QObject
+from PyQt6.QtWidgets import QWidget, QApplication, QPushButton, QVBoxLayout, QLabel, QLineEdit
+
+class ShortcutPlayer(QWidget):
     def __init__(self, gesture_map: GestureMap):
+        super().__init__()
+
+        self.hide()
+
+        self.timer = QTimer()
+        self.timer.timeout.connect(self.regonise_play_shortcut)
+        self.timer.start(100)
+
         self.keyboard = Controller()
         self.gesture_map = gesture_map
+        self.vision_manager = VisionManager.instance()
 
     def regonise_play_shortcut(self):
-        vision_manager = VisionManager.instance()
+        frame = self.vision_manager.get_frame()
+        landmarkers = self.vision_manager.get_landmarkers(frame)
+        name, confidence = self.vision_manager.recognise_gesture(self.gesture_map.gestures, landmarkers.hand_landmarks)
 
-        frame = vision_manager.get_frame()
-        landmarkers = vision_manager.get_landmarkers(frame)
-        name, confidence = vision_manager.recognise_gesture(self.gesture_map.gestures, landmarkers.hand_landmarks)
+        gesture: Gesture = self.gesture_map.get_gesture(name)
+        if gesture is None:
+            return
 
-        gesture, shortcut = self.gesture_map.get_gesture(name)
-
-        self._play_shortcut(shortcut)
+        print(f"Name: {name}, Gesture: {gesture.gesture}, Shortcut: {gesture.shortcut}")
+        self._play_shortcut(gesture.shortcut)
 
     def _play_shortcut(self, shortcut: list[str]):
         for k in shortcut:
