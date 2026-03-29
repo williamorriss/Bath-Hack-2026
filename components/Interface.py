@@ -5,7 +5,7 @@ from PyQt6.QtGui import QIcon, QFont, QColor
 from PyQt6.QtGui import QIcon
 from components.gesture_map import GestureMap
 from components.video import VideoFeed
-from ShortcutPlayer import ShortcutPlayer
+from ShortcutPlayer import ShortcutWorker
 from components.camera_selector import CameraSelector
 
 
@@ -52,8 +52,8 @@ class MainWindow(QMainWindow):
         self.video_feed.activate()
 
         #shortcut player loop
-        self.shortcut_player = ShortcutPlayer(self.gesture_map.binding)
-        layout.addWidget(self.shortcut_player, 2, 2)
+        self.shortcut_worker = ShortcutWorker(self.gesture_map.binding)
+        self.shortcut_worker.start()
 
     def sliding_boxes(self, layout, gesture_map):
         box_layout = QListWidget()

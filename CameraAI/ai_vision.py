@@ -1,4 +1,7 @@
+import time
+
 import mediapipe as mp
+from PyQt6.QtCore import QThread, pyqtSignal as Signal
 from PyQt6.QtGui import QPixmap, QImage
 from mediapipe.tasks import python
 from mediapipe.tasks.python import vision
@@ -6,11 +9,14 @@ import numpy as np
 import cv2
 import os
 
+type Frame = np.ndarray
 type Gesture = np.ndarray
 
-#from gesture import Gesture
 
-class VisionManager:
+class VisionManager(QThread):
+    frame_ready = Signal(np.ndarray)
+    image_ready = Signal(QPixmap)
+
     _instance = None
     def __new__(cls):
         if cls._instance is None:
@@ -27,6 +33,11 @@ class VisionManager:
     ]
 
     def __init__(self, model_path=None, cap_no: int = 0):
+        super().__init__()
+        self.active = True
+        if hasattr(self, '_initialized'):  # guard against re-init
+            return
+
         self.last_timestamp = 0
 
         # Fix: Use provided model_path or default to script directory
@@ -65,8 +76,27 @@ class VisionManager:
             print("Error: Could not open webcam")
             self.cap = None
 
+    def run(self):
+        self.active = True
+        while self.active:
+            t = time.perf_counter()
+            frame = self.get_frame()
+            if frame is not None:
+                pxmap = self.update_frame(frame)
+                if pxmap is not None:
+                    self.image_ready.emit(pxmap)
+            elapsed = time.perf_counter() - t
+            remaining = (1/30) - elapsed  # target 30fps, not 60
+            if remaining > 0:
+                time.sleep(remaining)
+
+    def stop(self):
+        self.active = False
+        self.wait()  # fix: block until thread actually finishes
+
     def set_source(self, cap_no: int):
-        self.cap.release()
+        if self.cap:
+            self.cap.release()
         self.cap = cv2.VideoCapture(cap_no)
 
     @staticmethod
@@ -74,8 +104,6 @@ class VisionManager:
         if VisionManager._instance is None:
             VisionManager._instance = VisionManager()
         return VisionManager._instance
-
-
 
     def release(self):
         """Clean up resources"""
@@ -87,22 +115,22 @@ class VisionManager:
 
     ######################################################################
 
-    def get_frame(self) -> Gesture | None:
+    def get_frame(self) -> Frame | None:
         """Get a single frame from webcam"""
         if self.cap is None:
             print("Webcam not initialized")
             return None
-            
+
         ret, frame = self.cap.read()
         if not ret:
             print("Error: Could not read frame")
             return None
-        
+
         # Flip horizontally for mirror view
         frame = cv2.flip(frame, 1)
         return frame
     
-    def get_annotated_frame(self, landmarkers, frame) -> Gesture | None:
+    def get_annotated_frame(self, landmarkers, frame) -> Frame | None:
         # Draw hand landmarks if detected
         if landmarkers.hand_landmarks:
             # Draw the landmarks
@@ -188,6 +216,7 @@ class VisionManager:
     ######################################################################
 
     def get_landmarkers(self, frame):
+
         """Get hand landmarks from a frame"""
         if self.landmarker is None:
             print("Landmarker not initialized")
@@ -205,11 +234,11 @@ class VisionManager:
             mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb_frame)
 
             current_time = int(cv2.getTickCount() / cv2.getTickFrequency() * 1000)
-            
+
             # Ensure timestamp is strictly increasing
             if current_time <= self.last_timestamp:
                 current_time = self.last_timestamp + 1
-            
+
             self.last_timestamp = current_time
 
             # Detect hands in the frame (reuse existing landmarker)
@@ -220,8 +249,7 @@ class VisionManager:
             print(f"Detection error: {e}")
             return None
 
-    def update_frame(self) -> QPixmap | None:
-        frame = self.get_frame()
+    def update_frame(self, frame: Frame) -> QPixmap | None:
         if frame is None:
             return None
         landmarks = self.get_landmarkers(frame)
