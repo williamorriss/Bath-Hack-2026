@@ -1,11 +1,7 @@
-from PyQt6.QtWidgets import QWidget, QMainWindow, QPushButton, QGridLayout
+from PyQt6.QtWidgets import QWidget, QMainWindow, QPushButton, QLabel, QGridLayout, QListWidget, QListWidgetItem, QHBoxLayout, QLineEdit
 from PyQt6.QtCore import Qt
-from PyQt6.QtMultimedia import QMediaCaptureSession
-import threading
-
-from PyQt6.QtWidgets import QWidget, QMainWindow, QPushButton, QLabel, QGridLayout, QApplication, QListWidget, QListWidgetItem
-from PyQt6.QtCore import Qt, QPoint, QTimer
-from PyQt6.QtMultimedia import QCamera, QMediaCaptureSession, QMediaDevices
+from PyQt6.QtMultimedia import QCamera, QMediaCaptureSession
+from PyQt6.QtGui import QIcon
 from bindings import GestureMap
 from video import VideoFeed
 from ShortcutPlayer import ShortcutPlayer
@@ -19,6 +15,8 @@ class MainWindow(QMainWindow):
 
         self.setCentralWidget(central)
         layout = QGridLayout(central)
+        #app icon
+        self.setWindowIcon(QIcon("skeleton_left.png"))
 
         #title
         self.title = QLabel("Short Signs")
@@ -35,7 +33,7 @@ class MainWindow(QMainWindow):
         # start feed
         self.start = QPushButton("Start feed")
         self.start.setFixedSize(100,100)
-        layout.addWidget(self.start, 2, 0)
+        layout.addWidget(self.start, 3, 0)
         self.session = QMediaCaptureSession()
         self.start.clicked.connect(self.video_feed.activate)
 
@@ -52,11 +50,41 @@ class MainWindow(QMainWindow):
         layout.addWidget(self.shortcut_player, 2, 2)
 
     def sliding_boxes(self,layout):
-        box_layout = QListWidget()
-        item = QListWidgetItem(box_layout)
+        #the item is so that the button can be added into the list widget
+        self.box_layout = QListWidget()
+        item = QListWidgetItem(self.box_layout)
+
         add_button = QPushButton("Add shortcut")
         add_button.setFixedSize(100,100)
-        box_layout.addItem(item)
-        box_layout.setItemWidget(item,add_button)
+        add_button.clicked.connect(self.add_shortcut)
 
-        layout.addWidget(box_layout, 1, 1)
+        #this is so the add button can be centered
+        button_container = QWidget()
+        container_layout = QHBoxLayout(button_container)
+        container_layout.addWidget(add_button, alignment=Qt.AlignmentFlag.AlignHCenter)
+
+        item.setSizeHint(button_container.sizeHint())
+        self.box_layout.addItem(item)
+        self.box_layout.setItemWidget(item,button_container)
+
+        layout.addWidget(self.box_layout, 1, 1)
+
+    def add_shortcut(self):
+        row = QWidget()
+        row_layout = QHBoxLayout(row)
+
+        gesture = QLabel("Gesture")
+        shortcut = QPushButton("Shortcut")
+        name = QLineEdit("Name")
+
+        shortcut.setFixedSize(100,50)
+        name.setFixedSize(100,50)
+        row_layout.addWidget(name)
+        row_layout.addWidget(shortcut)
+
+        item = QListWidgetItem()
+        item.setSizeHint(row.sizeHint())
+        # insert before the last item (the button)
+        button_index = self.box_layout.count() - 1
+        self.box_layout.insertItem(button_index, item)
+        self.box_layout.setItemWidget(item, row)
