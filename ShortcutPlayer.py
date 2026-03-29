@@ -20,22 +20,29 @@ class ShortcutPlayer(QWidget):
         self.binding_manager = binding_manager
         self.vision_manager = VisionManager.instance()
 
-    def regonise_play_shortcut(self):
+        self.previous_gesture_name = None
+
+    def regonise_play_shortcut(self) -> bool:
         frame = self.vision_manager.get_frame()
         landmarkers = self.vision_manager.get_landmarkers(frame)
         if landmarkers is None:
-            return
+            return False
 
         name, confidence = self.vision_manager.recognise_gesture(self.binding_manager.bindings, landmarkers.hand_landmarks)
 
-        if not self.binding_manager.bindings or name is None:
-            return
+        if not self.binding_manager.bindings or name is None or name == self.previous_gesture_name:
+            self.previous_gesture_name = name
+            return False
 
         binding = self.binding_manager.bindings[name]
         shortcut = binding.shortcut
 
         print(f"Name: {name}, Confidence: {confidence}")
         self._play_shortcut(shortcut)
+        
+        self.previous_gesture_name = name
+
+        return True
 
     def _play_shortcut(self, shortcut: list[str]):
         for k in shortcut:
