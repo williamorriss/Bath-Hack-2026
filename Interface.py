@@ -1,6 +1,7 @@
-from PyQt6.QtWidgets import QWidget, QMainWindow, QPushButton, QLabel, QGridLayout, QApplication, QListWidget, QListWidgetItem, QHBoxLayout
-from PyQt6.QtCore import Qt, QPoint, QTimer
-from PyQt6.QtMultimedia import QCamera, QMediaCaptureSession, QMediaDevices
+from PyQt6.QtWidgets import QWidget, QMainWindow, QPushButton, QLabel, QGridLayout, QListWidget, QListWidgetItem, QHBoxLayout, QLineEdit
+from PyQt6.QtCore import Qt
+from PyQt6.QtMultimedia import QCamera, QMediaCaptureSession
+from PyQt6.QtGui import QIcon
 from bindings import GestureMap
 from video import VideoFeed
 
@@ -13,6 +14,8 @@ class MainWindow(QMainWindow):
 
         self.setCentralWidget(central)
         layout = QGridLayout(central)
+        #app icon
+        self.setWindowIcon(QIcon("skeleton_left.png"))
 
         #title
         self.title = QLabel("Short Signs")
@@ -29,7 +32,7 @@ class MainWindow(QMainWindow):
         # start feed
         self.start = QPushButton("Start feed")
         self.start.setFixedSize(100,100)
-        layout.addWidget(self.start, 2, 0)
+        layout.addWidget(self.start, 3, 0)
         self.session = QMediaCaptureSession()
         self.start.clicked.connect(self.video_feed.activate)
 
@@ -64,15 +67,15 @@ class MainWindow(QMainWindow):
     def add_shortcut(self):
         row = QWidget()
         row_layout = QHBoxLayout(row)
+
         gesture = QLabel("Gesture")
         shortcut = QPushButton("Shortcut")
-        name = QLabel("Name")
-        gesture.setFixedSize(100,50)
+        name = QLineEdit("Name")
+
         shortcut.setFixedSize(100,50)
         name.setFixedSize(100,50)
         row_layout.addWidget(name)
         row_layout.addWidget(shortcut)
-        row_layout.addWidget(gesture)
 
         item = QListWidgetItem()
         item.setSizeHint(row.sizeHint())
