@@ -11,6 +11,7 @@ class MainWindow(QMainWindow):
         super().__init__()
         self.setWindowTitle("Short Signs")
         central = QWidget()
+
         self.setCentralWidget(central)
         layout = QGridLayout(central)
         #app icon
@@ -25,7 +26,7 @@ class MainWindow(QMainWindow):
 
         # video
         self.video_feed = VideoFeed(800, 600)
-        layout.addWidget(self.video_feed, 1, 0)
+        layout.addWidget(self.video_feed, 0, 1)
         layout.setAlignment(Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignHCenter)
 
         # start feed
@@ -40,6 +41,8 @@ class MainWindow(QMainWindow):
 
         #adding the boxes on the side or smth
         self.sliding_boxes(layout)
+
+        self.video_feed.activate()
 
     def sliding_boxes(self,layout):
         #the item is so that the button can be added into the list widget
