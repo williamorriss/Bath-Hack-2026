@@ -17,10 +17,6 @@ class VisionManager(QThread):
     image_ready = Signal(QPixmap)
 
     _instance = None
-    def __new__(cls):
-        if cls._instance is None:
-            cls._instance = super().__new__(cls)
-        return cls._instance
 
     HAND_CONNECTIONS = [
         (0, 1), (1, 2), (2, 3), (3, 4),        # Thumb
@@ -30,6 +26,12 @@ class VisionManager(QThread):
         (0, 17), (17, 18), (18, 19), (19, 20), # Pinky
         (5, 9), (9, 13), (13, 17)              # Palm connections
     ]
+
+    @staticmethod
+    def instance(cls) -> "VisionManager":
+        if cls._instance is None:
+            cls._instance = cls()
+        return cls._instance
 
     def __init__(self, model_path=None, cap_no: int = 0):
         super().__init__()
