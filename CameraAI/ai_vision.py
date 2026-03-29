@@ -233,7 +233,7 @@ class VisionManager(QThread):
                 distance = np.linalg.norm(current_features[i] - template_features)              
                 total_distance += distance
 
-            if distance < best_distance:
+            if total_distance < best_distance:
                 best_distance = total_distance
                 best_match = name
         
