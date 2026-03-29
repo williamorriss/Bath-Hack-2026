@@ -1,4 +1,4 @@
-from bindings import GestureMap, Gesture
+from components.bindings import GestureMap
 from CameraAI.ai_vision import VisionManager
 
 from pynput.keyboard import Controller, Key
@@ -23,14 +23,22 @@ class ShortcutPlayer(QWidget):
     def regonise_play_shortcut(self):
         frame = self.vision_manager.get_frame()
         landmarkers = self.vision_manager.get_landmarkers(frame)
-        name, confidence = self.vision_manager.recognise_gesture(self.gesture_map.gestures, landmarkers.hand_landmarks)
-
-        gesture: Gesture = self.gesture_map.get_gesture(name)
-        if gesture is None:
+        if landmarkers is None:
             return
 
-        print(f"Name: {name}, Gesture: {gesture.gesture}, Shortcut: {gesture.shortcut}")
-        self._play_shortcut(gesture.shortcut)
+        name, confidence = self.vision_manager.recognise_gesture(self.gesture_map.binding, landmarkers.hand_landmarks)
+
+        binding = self.gesture_map.binding.get(name)
+        if binding is None:
+            return
+
+        shortcut = binding.get("shortcut")
+        if shortcut is None:
+            print("Gesture not found when binding exists")
+            return
+
+        print(f"Name: {name}, Confidence: {confidence}")
+        self._play_shortcut(shortcut)
 
     def _play_shortcut(self, shortcut: list[str]):
         for k in shortcut:

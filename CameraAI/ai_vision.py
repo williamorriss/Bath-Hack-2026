@@ -3,7 +3,6 @@ from PyQt6.QtGui import QPixmap, QImage
 from mediapipe.tasks import python
 from mediapipe.tasks.python import vision
 import numpy as np
-import json
 import cv2
 import os
 
@@ -29,7 +28,7 @@ class VisionManager:
     ]
 
     def __init__(self, model_path=None, cap_no: int = 0):
-        self.current_gesture = None
+        self.last_timestamp = 0
 
         # Fix: Use provided model_path or default to script directory
         if model_path is None:
@@ -159,9 +158,8 @@ class VisionManager:
         best_match = None
         best_distance = float('inf')
         
-        for gesture in saved_gestures:
-            hands = gesture.gesture
-            name = gesture.name
+        for name, binding in saved_gestures.items():
+            hands = binding["gesture"]
 
             if len(hands) != len(current_features):
                 continue
@@ -206,11 +204,16 @@ class VisionManager:
             # Create MediaPipe Image object
             mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb_frame)
 
-            # Get timestamp in milliseconds
-            timestamp_ms = int(cv2.getTickCount() / cv2.getTickFrequency() * 1000)
+            current_time = int(cv2.getTickCount() / cv2.getTickFrequency() * 1000)
+            
+            # Ensure timestamp is strictly increasing
+            if current_time <= self.last_timestamp:
+                current_time = self.last_timestamp + 1
+            
+            self.last_timestamp = current_time
 
             # Detect hands in the frame (reuse existing landmarker)
-            result = self.landmarker.detect_for_video(mp_image, timestamp_ms)
+            result = self.landmarker.detect_for_video(mp_image, current_time)
             return result
 
         except Exception as e:
