@@ -68,14 +68,11 @@ class MainWindow(QMainWindow):
         gesture = QLabel("Gesture")
         shortcut = QPushButton("Shortcut")
         name = QLineEdit("Name")
-        name.setReadOnly(True)
 
-        gesture.setFixedSize(100,50)
         shortcut.setFixedSize(100,50)
         name.setFixedSize(100,50)
         row_layout.addWidget(name)
         row_layout.addWidget(shortcut)
-        row_layout.addWidget(gesture)
 
         item = QListWidgetItem()
         item.setSizeHint(row.sizeHint())
