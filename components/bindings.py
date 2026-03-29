@@ -4,6 +4,7 @@ import os
 import numpy as np
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QWidget, QPushButton, QVBoxLayout, QLabel, QLineEdit
+from PyQt6.QtGui import QFont
 from components.capture.gesture import GestureCapture
 from CameraAI.ai_vision import Gesture
 from components.capture.shortcut import BindingCapture, ShortCut
@@ -58,11 +59,15 @@ class GestureMap(QWidget):
         self.name_field.setText("")
         self.name_field.textChanged.connect(self.build_binding.set_name)
         layout.addWidget(self.name_field)
+        name_font = QFont('Times New Roman')
+        self.name_field.setFont(name_font)
 
         ## keybind
         self.keybind_button = QPushButton("Bind")
         self.keybind_button.clicked.connect(self.capture_binding.activate)
         layout.addWidget(self.keybind_button)
+        keybind_font = QFont('Times New Roman')
+        self.keybind_button.setFont(keybind_font)
 
         self.keys_label = QLabel("Keys pressed: (none)")
         self.capture_binding.update.connect(lambda texts : self.keys_label.setText(" ".join(texts)))
@@ -70,6 +75,8 @@ class GestureMap(QWidget):
         self.keys_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.keys_label.setStyleSheet("font-size: 14px; color: #555;")
         layout.addWidget(self.keys_label)
+        keylabel_font = QFont('Times New Roman')
+        self.keys_label.setFont(keylabel_font)
 
         self.key_status = QLabel()
         self.capture_binding.update.connect(self._set_shortcut_status)
@@ -79,20 +86,28 @@ class GestureMap(QWidget):
         self.gesture_button.clicked.connect(self.capture_gesture.record_gesture)
         self.capture_gesture.binding.connect(self.build_binding.set_gesture)
         layout.addWidget(self.gesture_button)
+        gesture_font = QFont('Times New Roman')
+        self.gesture_button.setFont(gesture_font)
 
         self.gesture_status = QLabel()
         self.capture_gesture.binding.connect(self._set_gesture_status)
         layout.addWidget(self.gesture_status)
+        gesturestatus_font = QFont('Times New Roman')
+        self.gesture_status.setFont(gesturestatus_font)
 
         # total
         self.commit_button = QPushButton("Commit")
         self.commit_button.clicked.connect(self._commit)
         layout.addWidget(self.commit_button)
+        commit_font = QFont('Times New Roman')
+        self.commit_button.setFont(commit_font)
 
         # load
         self.load_button = QPushButton("Load")
         self.load_button.clicked.connect(self._load_from_json)
         layout.addWidget(self.load_button)
+        load_font = QFont('Times New Roman')
+        self.load_button.setFont(load_font)
 
         self.setLayout(layout)
 
