@@ -2,9 +2,8 @@ from PyQt6.QtWidgets import QWidget, QMainWindow, QPushButton, QLabel, QGridLayo
 from PyQt6.QtCore import Qt
 from PyQt6.QtMultimedia import QCamera, QMediaCaptureSession
 from PyQt6.QtGui import QIcon
-from bindings import GestureMap
-from video import VideoFeed
-from ShortcutPlayer import ShortcutPlayer
+from components.bindings import GestureMap
+from components.video import VideoFeed
 
 
 class MainWindow(QMainWindow):
@@ -44,10 +43,6 @@ class MainWindow(QMainWindow):
         self.sliding_boxes(layout)
 
         self.video_feed.activate()
-
-        #shortcut player loop
-        self.shortcut_player = ShortcutPlayer(self.gesture_map)
-        layout.addWidget(self.shortcut_player, 2, 2)
 
     def sliding_boxes(self,layout):
         #the item is so that the button can be added into the list widget

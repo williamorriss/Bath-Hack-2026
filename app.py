@@ -4,7 +4,7 @@ from typing import Callable
 from PyQt6.QtCore import QCameraPermission, Qt
 from PyQt6.QtWidgets import QApplication
 from CameraAI.ai_vision import VisionManager
-from Interface import MainWindow
+from components.Interface import MainWindow
 
 def get_camera_permission(self):
     permission = QCameraPermission()
