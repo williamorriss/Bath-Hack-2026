@@ -2,8 +2,8 @@ from PyQt6.QtWidgets import QWidget, QMainWindow, QPushButton, QLabel, QGridLayo
 from PyQt6.QtCore import Qt
 from PyQt6.QtMultimedia import QCamera, QMediaCaptureSession
 from PyQt6.QtGui import QIcon
-from bindings import GestureMap
-from video import VideoFeed
+from components.bindings import GestureMap
+from components.video import VideoFeed
 
 
 class MainWindow(QMainWindow):

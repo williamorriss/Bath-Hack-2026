@@ -4,11 +4,11 @@ import os
 import numpy as np
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QWidget, QPushButton, QVBoxLayout, QLabel, QLineEdit
-from capture.gesture import GestureCapture
+from components.capture.gesture import GestureCapture
 from CameraAI.ai_vision import Gesture
-from capture.shortcut import BindingCapture, ShortCut
+from components.capture.shortcut import BindingCapture, ShortCut
 
-from binding_entry import BuildGestureEntry
+from components.binding_entry import BuildGestureEntry
 type StoredGesture = list[int]
 
 type Binding = dict[str, dict[str, Gesture | ShortCut]]
