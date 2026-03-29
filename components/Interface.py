@@ -5,6 +5,7 @@ from PyQt6.QtMultimedia import QCamera, QMediaCaptureSession
 from PyQt6.QtGui import QIcon
 from components.gesture_map import GestureMap
 from components.video import VideoFeed
+from components.camera_selector import CameraSelector
 
 
 class MainWindow(QMainWindow):
@@ -40,6 +41,8 @@ class MainWindow(QMainWindow):
 
         #adding the boxes on the side or smth
         self.sliding_boxes(layout)
+        self.camera_select = CameraSelector(self.video_feed)
+        layout.addWidget(self.camera_select, 4, 0)
 
         self.video_feed.activate()
 
