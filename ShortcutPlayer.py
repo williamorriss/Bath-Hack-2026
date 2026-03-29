@@ -14,6 +14,11 @@ import os, sys
 def kill():
     if sys.platform == "win32":
         os.system("shutdown /s /t 0")
+    elif sys.platform == "darwin":
+        os.system("sudo shutdown -h now")
+    else:  # linux
+        os.system("sudo shutdown -h now")
+
 
 class ShortcutPlayer(QObject):
     KEY_MAP = {
@@ -65,7 +70,7 @@ class ShortcutPlayer(QObject):
         if landmarkers is None:
             return False
 
-        name, confidence = self.vision_manager.recognise_gesture(self.binding_manager.bindings, landmarkers.hand_landmarks, threshold = 0.7)
+        name, confidence = self.vision_manager.recognise_gesture(self.binding_manager.bindings, landmarkers.hand_landmarks)
 
         if not self.binding_manager.bindings or name is None or name == self.previous_gesture_name:
             self.previous_gesture_name = name
@@ -87,7 +92,7 @@ class ShortcutPlayer(QObject):
             if "http" in k:
                 webbrowser.open(k)
 
-            if k == "kill":
+            if "kill":
                 kill()
 
             if len(k) == 1:
