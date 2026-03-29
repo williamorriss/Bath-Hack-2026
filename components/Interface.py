@@ -14,6 +14,7 @@ class MainWindow(QMainWindow):
         super().__init__()
         self.setWindowTitle("Short Signs")
         central = QWidget()
+        self.setStyleSheet("background-color: #1f1f1f")
 
 
         self.setCentralWidget(central)
@@ -36,7 +37,7 @@ class MainWindow(QMainWindow):
         # start feed
         self.start = QPushButton("Start feed")
         self.start.setFixedSize(100,100)
-        layout.addWidget(self.start, 3, 0)
+        layout.addWidget(self.start, 5, 0)
         self.session = QMediaCaptureSession()
         self.start.clicked.connect(self.video_feed.activate)
         start_font = QFont('Times New Roman')
@@ -47,7 +48,11 @@ class MainWindow(QMainWindow):
         self.gesture_map = GestureMap()
         self.sliding_boxes(layout, self.gesture_map)
         self.camera_select = CameraSelector(self.video_feed)
-        layout.addWidget(self.camera_select, 4, 0)
+        self.camera_select.setFixedSize(300,300)
+        container = QWidget()
+        container_layout = QHBoxLayout(container)
+        container_layout.addWidget(self.camera_select, alignment=Qt.AlignmentFlag.AlignHCenter)
+        layout.addWidget(container, 4, 1)
 
         self.video_feed.activate()
 

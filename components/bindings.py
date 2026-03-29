@@ -15,7 +15,7 @@ from components.capture.shortcut import ShortCut
 
 type StoredGesture = list[int]
 
-type BindingDict = dict[str, "Binding"]
+type BindingDict = dict[str, Binding]
 
 type StoredBinding = dict[str, dict[str, StoredBinding | ShortCut]]
 
