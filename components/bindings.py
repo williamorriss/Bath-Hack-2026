@@ -1,5 +1,5 @@
 import json
-from collections.abc import dict_values
+from collections.abc import ValuesView
 from json import JSONDecodeError
 
 from PyQt6.QtCore import pyqtSignal as Signal
@@ -29,13 +29,16 @@ class BindingManager:
         self.save_to_json()
 
     def save_to_json(self):
-        if not self.bindings:
-            json.dump({}, open("maps.json", "w"))
-            return
+        with open("maps.json", "w") as f:
+            if not self.bindings:
+                json.dump({}, f)
+                return
 
-        from functools import reduce
-        data = reduce(lambda x, y: x | y, map(lambda x : x.to_stored(), self.bindings.values()))
-        json.dump(data, open("maps.json", "w"))
+            data = {}
+            for k, v in self.bindings.items():
+                data.update(v.to_stored())
+
+            json.dump(data, f, indent=4)
 
     def values(self) -> ValuesView["Binding"]:
         return self.bindings.values()

@@ -12,7 +12,7 @@ from components.video import VideoFeed
 
 import cv2
 
-from video import VideoFeed
+from components.video import VideoFeed
 
 
 def get_active_cameras(max_index: int = 5) -> list[QPushButton]:

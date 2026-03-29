@@ -45,7 +45,7 @@ class MainWindow(QMainWindow):
 
         #adding the boxes on the side or smth
         self.gesture_map = GestureMap()
-        self.sliding_boxes(layout)
+        self.sliding_boxes(layout, self.gesture_map)
         self.camera_select = CameraSelector(self.video_feed)
         layout.addWidget(self.camera_select, 4, 0)
 
