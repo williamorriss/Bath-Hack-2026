@@ -46,6 +46,7 @@ class MainWindow(QMainWindow):
 
         #adding the boxes on the side or smth
         self.gesture_map = GestureMap()
+        self.gesture_map.signal_comit.connect(lambda: self.sliding_boxes(layout, self.gesture_map))
         self.sliding_boxes(layout, self.gesture_map)
         self.camera_select = CameraSelector(self.video_feed)
         self.camera_select.setFixedSize(300,300)

@@ -12,9 +12,17 @@ import os
 type Frame = np.ndarray
 type Gesture = np.ndarray
 
+class Annotated:
+    def __init__(self, frame, landmarks):
+        self.frame = frame
+        self.landmarks = landmarks
+
+    def get(self) -> tuple[Frame,Frame]:
+        return (self.frame, self.landmarks)
+
 
 class VisionManager(QThread):
-    frame_ready = Signal(np.ndarray)
+    annotated_frame_ready = Signal(Annotated)
     image_ready = Signal(QPixmap)
 
     _instance = None
@@ -80,11 +88,9 @@ class VisionManager(QThread):
         self.active = True
         while self.active:
             t = time.perf_counter()
-            frame = self.get_frame()
-            if frame is not None:
-                pxmap = self.update_frame(frame)
-                if pxmap is not None:
-                    self.image_ready.emit(pxmap)
+            pxmap = self.update_frame()
+            if pxmap is not None:
+                self.image_ready.emit(pxmap)
             elapsed = time.perf_counter() - t
             remaining = (1/30) - elapsed  # target 30fps, not 60
             if remaining > 0:
@@ -189,7 +195,7 @@ class VisionManager(QThread):
         for name, binding in saved_gestures.items():
             hands = binding.gesture
 
-            if len(hands) != len(current_features):
+            if len(hands) != len(current_features) or not len(hands):
                 continue
             total_distance = 0
 
@@ -249,10 +255,12 @@ class VisionManager(QThread):
             print(f"Detection error: {e}")
             return None
 
-    def update_frame(self, frame: Frame) -> QPixmap | None:
+    def update_frame(self) -> QPixmap | None:
+        frame = self.get_frame()
         if frame is None:
             return None
         landmarks = self.get_landmarkers(frame)
+        self.annotated_frame_ready.emit(Annotated(frame, landmarks))
         if landmarks is None:
             return None
         bgra = self.get_annotated_frame(landmarks, frame)
