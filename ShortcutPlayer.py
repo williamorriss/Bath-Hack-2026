@@ -1,4 +1,4 @@
-from components.bindings import GestureMap
+from components.bindings import BindingManager
 from CameraAI.ai_vision import VisionManager
 
 from pynput.keyboard import Controller, Key
@@ -7,7 +7,7 @@ from PyQt6.QtCore import QTimer
 from PyQt6.QtWidgets import QWidget
 
 class ShortcutPlayer(QWidget):
-    def __init__(self, gesture_map: GestureMap):
+    def __init__(self, binding_manager: BindingManager):
         super().__init__()
 
         self.hide()
@@ -17,7 +17,7 @@ class ShortcutPlayer(QWidget):
         self.timer.start(10)
 
         self.keyboard = Controller()
-        self.gesture_map = gesture_map
+        self.binding_manager = binding_manager
         self.vision_manager = VisionManager.instance()
 
     def regonise_play_shortcut(self):
@@ -26,16 +26,13 @@ class ShortcutPlayer(QWidget):
         if landmarkers is None:
             return
 
-        name, confidence = self.vision_manager.recognise_gesture(self.gesture_map.binding, landmarkers.hand_landmarks)
+        name, confidence = self.vision_manager.recognise_gesture(self.binding_manager.bindings, landmarkers.hand_landmarks)
 
-        binding = self.gesture_map.binding.get(name)
-        if binding is None:
+        if not self.binding_manager.bindings or name is None:
             return
 
-        shortcut = binding.get("shortcut")
-        if shortcut is None:
-            print("Gesture not found when binding exists")
-            return
+        binding = self.binding_manager.bindings[name]
+        shortcut = binding.shortcut
 
         print(f"Name: {name}, Confidence: {confidence}")
         self._play_shortcut(shortcut)

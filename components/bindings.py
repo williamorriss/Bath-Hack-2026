@@ -1,5 +1,5 @@
 import json
-from collections.abc import dict_values
+from collections.abc import ValuesView
 
 from PyQt6.QtCore import pyqtSignal as Signal
 import numpy as np
@@ -10,7 +10,7 @@ from components.capture.shortcut import ShortCut
 
 type StoredGesture = list[int]
 
-type BindingDict = dict[str, Binding]
+type BindingDict = dict[str, "Binding"]
 
 type StoredBinding = dict[str, dict[str, StoredBinding | ShortCut]]
 
@@ -29,13 +29,13 @@ class BindingManager:
             return
 
         from functools import reduce
-        data = reduce(lambda x, y: x | y.to_dict(), self.bindings.values())
+        data = reduce(lambda x, y: x | y.to_stored(), self.bindings.items())
         json.dump(data, open("maps.json", "w"))
 
-    def values(self) -> dict_values[Binding]:
+    def values(self) -> ValuesView["Binding"]:
         return self.bindings.values()
 
-    def add_value(self, binding: Binding):
+    def add_value(self, binding: "Binding"):
         self.bindings[binding.name] = binding
         self.save_to_json()
 

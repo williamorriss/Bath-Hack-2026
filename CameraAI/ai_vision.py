@@ -6,7 +6,6 @@ import numpy as np
 import cv2
 import os
 
-
 type Gesture = np.ndarray
 
 #from gesture import Gesture
@@ -159,7 +158,7 @@ class VisionManager:
         best_distance = float('inf')
         
         for name, binding in saved_gestures.items():
-            hands = binding["gesture"]
+            hands = binding.gesture
 
             if len(hands) != len(current_features):
                 continue

@@ -39,24 +39,17 @@ class MainWindow(QMainWindow):
 
 
         #adding the boxes on the side or smth
-        self.sliding_boxes(layout)
+        self.gesture_map: GestureMap = GestureMap()
+        self.sliding_boxes(layout, self.gesture_map)
 
         self.video_feed.activate()
 
         #shortcut player loop
-        self.shortcut_player = ShortcutPlayer(self.gesture_map)
+        self.shortcut_player = ShortcutPlayer(self.gesture_map.binding)
         layout.addWidget(self.shortcut_player, 2, 2)
 
-
-    def sliding_boxes(self,layout):
-        #the item is so that the button can be added into the list widget
-        self.box_layout = QListWidget()
-        item = QListWidgetItem(self.box_layout)
-
-
-    def sliding_boxes(self, layout):
+    def sliding_boxes(self, layout, gesture_map):
         box_layout = QListWidget()
-        gesture_map = GestureMap()
 
         for bind in gesture_map.binding.values():
             item = QListWidgetItem()
