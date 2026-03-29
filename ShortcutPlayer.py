@@ -1,7 +1,7 @@
 from mediapipe.tasks.python.components.containers import landmark
 
 from components.bindings import BindingManager
-from CameraAI.ai_vision import VisionManager, HandLandmarkerResult, Annotated
+from CameraAI.ai_vision import VisionManager
 
 from pynput.keyboard import Controller, Key
 
@@ -57,12 +57,11 @@ class ShortcutPlayer(QObject):
         self.keyboard = Controller()
         self.binding_manager = binding_manager
         self.vision_manager = VisionManager.instance()
-        self.vision_manager.annotated_frame_ready.connect(self.regonise_play_shortcut)
+        self.vision_manager.landmarks_ready.connect(self.regonise_play_shortcut)
 
         self.previous_gesture_name = None
 
-    def regonise_play_shortcut(self, t: Annotated):
-        frame, landmarkers = t.get()
+    def regonise_play_shortcut(self, landmarkers):
         if landmarkers is None:
             return False
 

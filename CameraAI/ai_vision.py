@@ -48,17 +48,9 @@ class HandLandmarkerResult:
 
 
 
-class Annotated:
-    def __init__(self, frame, landmarks):
-        self.frame = frame
-        self.landmarks = landmarks
-
-    def get(self) -> tuple[Frame,object]:
-        return (self.frame, self.landmarks)
-
 
 class VisionManager(QThread):
-    annotated_frame_ready = Signal(Annotated)
+    landmarks_ready = Signal(object)
     image_ready = Signal(QPixmap)
 
     _instance = None
@@ -298,7 +290,7 @@ class VisionManager(QThread):
         landmarks = self.get_landmarkers(frame)
         if landmarks is None:
             return None
-        self.annotated_frame_ready.emit(Annotated(frame, landmarks))
+        self.landmarks_ready.emit(landmarks)
         bgra = self.get_annotated_frame(landmarks, frame)
         if bgra is None:
             return None
